@@ -1,0 +1,339 @@
+-- =============================================
+-- DATABASE: QuanLyBanNuoc
+-- Phù hợp app hiện tại: đăng nhập/đăng ký/OTP, giỏ hàng,
+-- đơn hàng, voucher, COD/VNPAY, bàn tại quán, hóa đơn, kho nguyên liệu.
+-- MySQL 8+
+-- =============================================
+create database QuanLyBanNuoc
+SET NAMES utf8mb4;
+SET time_zone = '+07:00';
+
+CREATE DATABASE IF NOT EXISTS QuanLyBanNuoc
+  CHARACTER SET utf8mb4
+  COLLATE utf8mb4_unicode_ci;
+
+USE QuanLyBanNuoc;
+
+-- Lưu ý quan trọng:
+-- Không dùng trigger UPDATE chính bảng để sinh mã (tránh lỗi MySQL 1442).
+-- UserCode / OrderCode / InvoiceCode sẽ do Backend sinh trước khi INSERT.
+
+-- =========================
+-- 1) USERS & OTP
+-- =========================
+CREATE TABLE IF NOT EXISTS Users (
+  UserId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  UserCode VARCHAR(20) NOT NULL,
+  UserName VARCHAR(120) NOT NULL,
+  Email VARCHAR(190) NOT NULL,
+  PasswordHash VARCHAR(255) NOT NULL,
+  Phone VARCHAR(20) NULL,
+  Address VARCHAR(255) NULL,
+  AvatarUrl VARCHAR(500) NULL,
+  OTPCode VARCHAR(10) NULL,
+  OTPExpiry DATETIME NULL,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY UK_Users_UserCode (UserCode),
+  UNIQUE KEY UK_Users_Email (Email),
+  UNIQUE KEY UK_Users_Phone (Phone)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS DeliveryAddresses (
+  AddressId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  UserId BIGINT UNSIGNED NOT NULL,
+  ReceiverName VARCHAR(120) NOT NULL,
+  Phone VARCHAR(20) NOT NULL,
+  AddressLine VARCHAR(255) NOT NULL,
+  IsDefault TINYINT(1) NOT NULL DEFAULT 0,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT FK_DeliveryAddresses_Users FOREIGN KEY (UserId)
+    REFERENCES Users(UserId) ON DELETE CASCADE,
+  KEY IDX_DeliveryAddresses_UserId (UserId)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 2) DANH MỤC - MÓN - SIZE - TOPPING
+-- =========================
+CREATE TABLE IF NOT EXISTS Category (
+  CategoryId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  CategoryName VARCHAR(120) NOT NULL,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY UK_Category_Name (CategoryName)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Size (
+  SizeId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  SizeName VARCHAR(50) NOT NULL,
+  ExtraPrice DECIMAL(12,2) NOT NULL DEFAULT 0,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY UK_Size_Name (SizeName)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Food (
+  FoodId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  FoodName VARCHAR(150) NOT NULL,
+  CategoryId BIGINT UNSIGNED NOT NULL,
+  BasePrice DECIMAL(12,2) NOT NULL,
+  DiscountPercent DECIMAL(5,2) NOT NULL DEFAULT 0,
+  Stock INT UNSIGNED NOT NULL DEFAULT 0,
+  ImageUrl VARCHAR(500) NULL,
+  Description TEXT NULL,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT FK_Food_Category FOREIGN KEY (CategoryId)
+    REFERENCES Category(CategoryId) ON DELETE RESTRICT,
+  KEY IDX_Food_CategoryId (CategoryId),
+  KEY IDX_Food_IsActive (IsActive)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Topping (
+  ToppingId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  ToppingName VARCHAR(120) NOT NULL,
+  Price DECIMAL(12,2) NOT NULL DEFAULT 0,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY UK_Topping_Name (ToppingName)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 3) KHO - NGUYÊN LIỆU
+-- =========================
+CREATE TABLE IF NOT EXISTS Ingredient (
+  IngredientId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  IngredientName VARCHAR(120) NOT NULL,
+  Unit VARCHAR(20) NOT NULL DEFAULT 'g',
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY UK_Ingredient_Name (IngredientName)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS FoodIngredient (
+  FoodIngredientId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  FoodId BIGINT UNSIGNED NOT NULL,
+  IngredientId BIGINT UNSIGNED NOT NULL,
+  QuantityRequired DECIMAL(12,3) NOT NULL,
+  CONSTRAINT FK_FoodIngredient_Food FOREIGN KEY (FoodId)
+    REFERENCES Food(FoodId) ON DELETE CASCADE,
+  CONSTRAINT FK_FoodIngredient_Ingredient FOREIGN KEY (IngredientId)
+    REFERENCES Ingredient(IngredientId) ON DELETE RESTRICT,
+  UNIQUE KEY UK_FoodIngredient_Unique (FoodId, IngredientId),
+  KEY IDX_FoodIngredient_FoodId (FoodId),
+  KEY IDX_FoodIngredient_IngredientId (IngredientId)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Warehouse (
+  WarehouseId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  IngredientId BIGINT UNSIGNED NOT NULL,
+  StockQty DECIMAL(12,3) NOT NULL DEFAULT 0,
+  LastUpdated DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT FK_Warehouse_Ingredient FOREIGN KEY (IngredientId)
+    REFERENCES Ingredient(IngredientId) ON DELETE RESTRICT,
+  UNIQUE KEY UK_Warehouse_Ingredient (IngredientId)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 4) GIỎ HÀNG
+-- =========================
+-- Theo mô hình ảnh: bảng GioHang chứa item (mỗi dòng là 1 món trong giỏ)
+CREATE TABLE IF NOT EXISTS GioHang (
+  GioHangId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  UserId BIGINT UNSIGNED NOT NULL,
+  FoodId BIGINT UNSIGNED NOT NULL,
+  SizeId BIGINT UNSIGNED NULL,
+  Quantity INT UNSIGNED NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT FK_GioHang_Users FOREIGN KEY (UserId)
+    REFERENCES Users(UserId) ON DELETE CASCADE,
+  CONSTRAINT FK_GioHang_Food FOREIGN KEY (FoodId)
+    REFERENCES Food(FoodId) ON DELETE RESTRICT,
+  CONSTRAINT FK_GioHang_Size FOREIGN KEY (SizeId)
+    REFERENCES Size(SizeId) ON DELETE SET NULL,
+  KEY IDX_GioHang_UserId (UserId),
+  KEY IDX_GioHang_FoodId (FoodId)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS GioHang_Topping (
+  GioHangToppingId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  GioHangId BIGINT UNSIGNED NOT NULL,
+  ToppingId BIGINT UNSIGNED NOT NULL,
+  Quantity INT UNSIGNED NOT NULL DEFAULT 1,
+  CONSTRAINT FK_GioHangTopping_GioHang FOREIGN KEY (GioHangId)
+    REFERENCES GioHang(GioHangId) ON DELETE CASCADE,
+  CONSTRAINT FK_GioHangTopping_Topping FOREIGN KEY (ToppingId)
+    REFERENCES Topping(ToppingId) ON DELETE RESTRICT,
+  UNIQUE KEY UK_GioHangTopping_Unique (GioHangId, ToppingId)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 5) THANH TOÁN - TRẠNG THÁI - VOUCHER
+-- =========================
+CREATE TABLE IF NOT EXISTS PhuongThucThanhToan (
+  PaymentMethodId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  TenPhuongThuc VARCHAR(50) NOT NULL,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY UK_PaymentMethod_Name (TenPhuongThuc)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS OrderStatus (
+  StatusId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  StatusName VARCHAR(50) NOT NULL,
+  UNIQUE KEY UK_OrderStatus_Name (StatusName)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Vouchers (
+  VoucherId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  Code VARCHAR(60) NOT NULL,
+  DiscountAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  DiscountPercentage DECIMAL(5,2) NOT NULL DEFAULT 0,
+  MinOrderAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  ExpiryDate DATETIME NOT NULL,
+  IsActive TINYINT(1) NOT NULL DEFAULT 1,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY UK_Vouchers_Code (Code)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 6) ĐƠN HÀNG
+-- =========================
+CREATE TABLE IF NOT EXISTS Orders (
+  OrderId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  OrderCode VARCHAR(30) NOT NULL,
+  UserId BIGINT UNSIGNED NOT NULL,
+  OrderDate DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  TotalAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  PaymentMethodId BIGINT UNSIGNED NOT NULL,
+  StatusId BIGINT UNSIGNED NOT NULL,
+  VoucherId BIGINT UNSIGNED NULL,
+  ReceiverName VARCHAR(120) NOT NULL,
+  ReceiverPhone VARCHAR(20) NOT NULL,
+  DeliveryAddress VARCHAR(255) NOT NULL,
+  Note VARCHAR(255) NULL,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT FK_Orders_Users FOREIGN KEY (UserId)
+    REFERENCES Users(UserId) ON DELETE RESTRICT,
+  CONSTRAINT FK_Orders_PaymentMethod FOREIGN KEY (PaymentMethodId)
+    REFERENCES PhuongThucThanhToan(PaymentMethodId) ON DELETE RESTRICT,
+  CONSTRAINT FK_Orders_Status FOREIGN KEY (StatusId)
+    REFERENCES OrderStatus(StatusId) ON DELETE RESTRICT,
+  CONSTRAINT FK_Orders_Voucher FOREIGN KEY (VoucherId)
+    REFERENCES Vouchers(VoucherId) ON DELETE SET NULL,
+  UNIQUE KEY UK_Orders_OrderCode (OrderCode),
+  KEY IDX_Orders_UserId (UserId),
+  KEY IDX_Orders_StatusId (StatusId),
+  KEY IDX_Orders_OrderDate (OrderDate)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS OrderDetails (
+  OrderDetailId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  OrderId BIGINT UNSIGNED NOT NULL,
+  FoodId BIGINT UNSIGNED NOT NULL,
+  SizeId BIGINT UNSIGNED NULL,
+  Quantity INT UNSIGNED NOT NULL DEFAULT 1,
+  UnitPrice DECIMAL(12,2) NOT NULL,
+  LineTotal DECIMAL(12,2) NOT NULL,
+  CONSTRAINT FK_OrderDetails_Orders FOREIGN KEY (OrderId)
+    REFERENCES Orders(OrderId) ON DELETE CASCADE,
+  CONSTRAINT FK_OrderDetails_Food FOREIGN KEY (FoodId)
+    REFERENCES Food(FoodId) ON DELETE RESTRICT,
+  CONSTRAINT FK_OrderDetails_Size FOREIGN KEY (SizeId)
+    REFERENCES Size(SizeId) ON DELETE SET NULL,
+  KEY IDX_OrderDetails_OrderId (OrderId),
+  KEY IDX_OrderDetails_FoodId (FoodId)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS OrderDetail_Toppings (
+  Id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  OrderDetailId BIGINT UNSIGNED NOT NULL,
+  ToppingId BIGINT UNSIGNED NOT NULL,
+  Quantity INT UNSIGNED NOT NULL DEFAULT 1,
+  Price DECIMAL(12,2) NOT NULL,
+  CONSTRAINT FK_ODT_OrderDetails FOREIGN KEY (OrderDetailId)
+    REFERENCES OrderDetails(OrderDetailId) ON DELETE CASCADE,
+  CONSTRAINT FK_ODT_Topping FOREIGN KEY (ToppingId)
+    REFERENCES Topping(ToppingId) ON DELETE RESTRICT,
+  UNIQUE KEY UK_ODT_Unique (OrderDetailId, ToppingId),
+  KEY IDX_ODT_OrderDetailId (OrderDetailId),
+  KEY IDX_ODT_ToppingId (ToppingId)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 7) BÀN & HÓA ĐƠN TẠI QUÁN
+-- =========================
+CREATE TABLE IF NOT EXISTS TableFood (
+  TableId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  TableName VARCHAR(50) NOT NULL,
+  Capacity INT UNSIGNED NOT NULL DEFAULT 2,
+  Status ENUM('available','occupied','reserved') NOT NULL DEFAULT 'available',
+  UNIQUE KEY UK_TableFood_TableName (TableName)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS Invoice (
+  InvoiceId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  InvoiceCode VARCHAR(30) NOT NULL,
+  TableId BIGINT UNSIGNED NOT NULL,
+  OrderId BIGINT UNSIGNED NULL,
+  DateCheckIn DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  DateCheckOut DATETIME NULL,
+  TotalAmount DECIMAL(12,2) NOT NULL DEFAULT 0,
+  CreatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT FK_Invoice_TableFood FOREIGN KEY (TableId)
+    REFERENCES TableFood(TableId) ON DELETE RESTRICT,
+  CONSTRAINT FK_Invoice_Orders FOREIGN KEY (OrderId)
+    REFERENCES Orders(OrderId) ON DELETE SET NULL,
+  UNIQUE KEY UK_Invoice_Code (InvoiceCode),
+  KEY IDX_Invoice_TableId (TableId)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS InvoiceDetail (
+  InvoiceDetailId BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  InvoiceId BIGINT UNSIGNED NOT NULL,
+  FoodId BIGINT UNSIGNED NOT NULL,
+  Quantity INT UNSIGNED NOT NULL DEFAULT 1,
+  UnitPrice DECIMAL(12,2) NOT NULL,
+  LineTotal DECIMAL(12,2) NOT NULL,
+  CONSTRAINT FK_InvoiceDetail_Invoice FOREIGN KEY (InvoiceId)
+    REFERENCES Invoice(InvoiceId) ON DELETE CASCADE,
+  CONSTRAINT FK_InvoiceDetail_Food FOREIGN KEY (FoodId)
+    REFERENCES Food(FoodId) ON DELETE RESTRICT,
+  KEY IDX_InvoiceDetail_InvoiceId (InvoiceId)
+) ENGINE=InnoDB;
+
+-- =========================
+-- 8) QUY ƯỚC SINH MÃ (xử lý ở Backend)
+-- =========================
+-- Users.UserCode     : USR + LPAD(UserId, 8, '0') (hoặc mã riêng theo nghiệp vụ)
+-- Orders.OrderCode   : ORD + yymmdd + sequence
+-- Invoice.InvoiceCode: INV + yymmdd + sequence
+
+-- =========================
+-- 9) SEED CƠ BẢN
+-- =========================
+INSERT INTO PhuongThucThanhToan (TenPhuongThuc)
+VALUES ('COD'), ('VNPAY')
+ON DUPLICATE KEY UPDATE TenPhuongThuc = VALUES(TenPhuongThuc);
+
+INSERT INTO OrderStatus (StatusName)
+VALUES ('preparing'), ('shipping'), ('completed'), ('cancelled')
+ON DUPLICATE KEY UPDATE StatusName = VALUES(StatusName);
+
+INSERT INTO Size (SizeName, ExtraPrice)
+VALUES ('S', 0), ('M', 5000), ('L', 10000)
+ON DUPLICATE KEY UPDATE ExtraPrice = VALUES(ExtraPrice);
+
+INSERT INTO Category (CategoryName)
+VALUES ('Cà phê'), ('Trà trái cây'), ('Sinh tố')
+ON DUPLICATE KEY UPDATE CategoryName = VALUES(CategoryName);
+
+SELECT 'QuanLyBanNuoc schema created successfully.' AS Message;
