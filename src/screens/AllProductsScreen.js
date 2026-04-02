@@ -15,6 +15,8 @@ import {
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
+import { useCart } from '../context/CartContext';
+import { Alert, Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -40,6 +42,7 @@ const allDrinks = [
 
 const AllProductsScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
+  const { addToCart } = useCart();
   const ui = {
     headerBg: isDarkMode ? 'rgba(20,20,20,0.7)' : 'rgba(255,255,255,0.78)',
     cardBg: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(248,250,252,0.94)',
@@ -80,7 +83,23 @@ const AllProductsScreen = ({ navigation }) => {
         <Text style={[styles.drinkName, { color: ui.textPrimary }]} numberOfLines={2}>{item.name}</Text>
         <View style={styles.priceRow}>
           <Text style={styles.drinkPrice}>{item.price}</Text>
-          <TouchableOpacity style={styles.addButton}>
+          <TouchableOpacity 
+            style={styles.addButton}
+            onPress={() => {
+              const numericPrice = typeof item.price === 'number' ? item.price : 
+                  Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
+              addToCart({
+                 id: item.id,
+                 name: item.name,
+                 price: numericPrice,
+                 image: item.image,
+                 quantity: 1
+              });
+              const msg = `Đã thêm ${item.name} vào giỏ hàng`;
+              if (Platform.OS === 'web') window.alert(msg);
+              else Alert.alert('Thành công', msg); 
+            }}
+          >
             <Ionicons name="add" size={20} color="#1A1A1A" />
           </TouchableOpacity>
         </View>

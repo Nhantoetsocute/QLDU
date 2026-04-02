@@ -4,15 +4,16 @@
 -- đơn hàng, voucher, COD/VNPAY, bàn tại quán, hóa đơn, kho nguyên liệu.
 -- MySQL 8+
 -- =============================================
-create database QuanLyBanNuoc
-SET NAMES utf8mb4;
-SET time_zone = '+07:00';
+DROP DATABASE IF EXISTS QuanLyBanNuoc;
 
-CREATE DATABASE IF NOT EXISTS QuanLyBanNuoc
+CREATE DATABASE QuanLyBanNuoc
   CHARACTER SET utf8mb4
   COLLATE utf8mb4_unicode_ci;
 
 USE QuanLyBanNuoc;
+
+SET NAMES utf8mb4;
+SET time_zone = '+07:00';
 
 -- Lưu ý quan trọng:
 -- Không dùng trigger UPDATE chính bảng để sinh mã (tránh lỗi MySQL 1442).

@@ -16,7 +16,7 @@ import { useUserProfile } from '../context/UserProfileContext';
 
 const MenuScreen = ({ navigation }) => {
   const { isDarkMode, colors, toggleTheme } = useAppTheme();
-  const { profile, avatarUri } = useUserProfile();
+  const { profile, avatarUri, logoutContext } = useUserProfile();
 
   const theme = {
     background: colors.background,
@@ -68,12 +68,18 @@ const MenuScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('Profile')}
             activeOpacity={0.8}
           >
-            <Image 
-              source={typeof avatarUri === 'string' && avatarUri.trim() ? { uri: avatarUri } : require('../../assets/images/nhan.jpg')}
-              style={[styles.avatar, { borderColor: theme.gold }]} 
-            />
+            {profile?.avatarUri || profile?.avatar ? (
+              <Image 
+                source={{ uri: profile.avatarUri || profile.avatar }}
+                style={[styles.avatar, { borderColor: theme.gold }]} 
+              />
+            ) : (
+              <View style={[styles.avatar, { borderColor: theme.gold, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(212, 175, 55, 0.1)' }]}>
+                <Ionicons name="person" size={30} color={theme.gold} />
+              </View>
+            )}
             <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: theme.text }]}>{profile.name}</Text>
+              <Text style={[styles.profileName, { color: theme.text }]}>{profile?.name || "Thành viên mới"}</Text>
               <Text style={[styles.profileMember, { color: theme.gold }]}>Thành viên Vàng (Gold)</Text>
             </View>
             <TouchableOpacity
@@ -133,7 +139,10 @@ const MenuScreen = ({ navigation }) => {
               icon="log-out-outline" 
               title="Đăng xuất" 
               isDestructive={true} 
-              onPress={() => navigation.replace('Login')}
+              onPress={async () => {
+                await logoutContext();
+                navigation.replace('Login');
+              }}
             />
           </View>
 

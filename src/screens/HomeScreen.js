@@ -11,10 +11,14 @@ import {
   Animated,
   StatusBar,
   ImageBackground,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
+import { useUserProfile } from '../context/UserProfileContext';
+import { useCart } from '../context/CartContext';
 
 const { width, height } = Dimensions.get('window');
 
@@ -123,6 +127,9 @@ const premiumProducts = [
 
 const HomeScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
+  const { profile, logoutContext } = useUserProfile();
+  const { cartItems, addToCart } = useCart();
+  
   const ui = {
     overlay: isDarkMode ? 'rgba(10, 10, 10, 0.78)' : 'rgba(255, 255, 255, 0.38)',
     glassHeaderBg: isDarkMode ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.58)',
@@ -169,17 +176,28 @@ const HomeScreen = ({ navigation }) => {
             {/* Bọc khu vực Profile bằng TouchableOpacity để bắt sự kiện đăng xuất */}
             <TouchableOpacity 
               style={styles.userInfo} 
-              onPress={() => navigation.replace('Login')}
+              onPress={async () => {
+                await logoutContext();
+                navigation.replace('Login');
+              }}
               activeOpacity={0.7}
             >
-              <Image 
-                source={require('../../assets/images/nhan.jpg')} 
-                style={styles.avatar} 
-              />
+              {profile?.avatar ? (
+                <Image 
+                  source={{ uri: profile.avatar }} 
+                  style={styles.avatar} 
+                />
+              ) : (
+                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(212, 175, 55, 0.2)' }]}>
+                  <Ionicons name="person" size={24} color="#D4AF37" />
+                </View>
+              )}
               <View>
                 <Text style={[styles.greeting, { color: ui.textSecondary }]}>Chào buổi sáng,</Text>
                 <View style={styles.nameRow}>
-                  <Text style={[styles.userName, { color: ui.textPrimary }]}>Bá Nhân</Text>
+                  <Text style={[styles.userName, { color: ui.textPrimary }]} numberOfLines={1}>
+                    {profile?.name || 'Khách'}
+                  </Text>
                   {/* Thêm một icon logout nhỏ màu gold để gợi ý người dùng */}
                   <MaterialCommunityIcons name="logout-variant" size={14} color="#D4AF37" style={{ marginLeft: 5 }} />
                 </View>
@@ -199,9 +217,11 @@ const HomeScreen = ({ navigation }) => {
               }}
             >
               <Feather name="shopping-bag" size={24} color="#D4AF37" />
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>3</Text>
-              </View>
+              {cartItems.length > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>{cartItems.length}</Text>
+                </View>
+              )}
             </TouchableOpacity>
           </View>
         </SafeAreaView>
@@ -263,7 +283,23 @@ const HomeScreen = ({ navigation }) => {
                   <Text style={[styles.premiumName, { color: ui.textPrimary }]} numberOfLines={2}>{item.name}</Text>
                   <View style={styles.premiumBottomRow}>
                     <Text style={styles.premiumPrice}>{item.price}</Text>
-                    <TouchableOpacity style={styles.goldAddButton}>
+                    <TouchableOpacity 
+                      style={styles.goldAddButton}
+                      onPress={() => {
+                        const numericPrice = typeof item.price === 'number' ? item.price : 
+                            Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
+                        addToCart({
+                           id: item.id,
+                           name: item.name,
+                           price: numericPrice,
+                           image: item.image,
+                           quantity: 1
+                        });
+                        const msg = `Đã thêm ${item.name} vào giỏ hàng`;
+                        if (Platform.OS === 'web') window.alert(msg);
+                        else Alert.alert('Thành công', msg); 
+                      }}
+                    >
                       <Ionicons name="add" size={18} color="#1A1A1A" />
                     </TouchableOpacity>
                   </View>

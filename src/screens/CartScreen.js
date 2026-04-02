@@ -11,30 +11,9 @@ import {
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
+import { useCart } from '../context/CartContext';
 
-const initialCartData = [
-  {
-    id: '1',
-    name: 'Nước ép rau má',
-    price: 120000,
-    image: require('../../assets/images/rauma.jpg'),
-    quantity: 1,
-  },
-  {
-    id: '2',
-    name: 'Trà đào cam xả',
-    price: 95000,
-    image: require('../../assets/images/tra_cam_xa.jpg'),
-    quantity: 1,
-  },
-  {
-    id: '3',
-    name: 'Cold Brew Thượng Hạng',
-    price: 75000,
-    image: require('../../assets/images/cold_brew.jpg'),
-    quantity: 1,
-  },
-];
+const initialCartData = [];
 
 const formatPrice = (price) => `${price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} đ`;
 
@@ -52,28 +31,16 @@ const CartScreen = ({ navigation, route }) => {
     imageBg: isDarkMode ? 'rgba(255,255,255,0.08)' : '#F5F5F5',
   };
 
-  const [cartItems, setCartItems] = useState(initialCartData);
-  const [selectedIds, setSelectedIds] = useState(initialCartData.map((item) => item.id));
+  const { cartItems, updateQuantity, removeItem } = useCart();
+  const [selectedIds, setSelectedIds] = useState([]);
 
   useEffect(() => {
-    const newItem = route?.params?.newItem;
-    if (!newItem) return;
-
-    setCartItems((prev) => {
-      const existing = prev.find((i) => i.name === newItem.name);
-      if (existing) {
-        return prev.map((i) =>
-          i.name === newItem.name ? { ...i, quantity: i.quantity + (newItem.quantity || 1) } : i
-        );
-      }
-      return [newItem, ...prev];
-    });
-
-    setSelectedIds((prev) => {
-      if (prev.includes(newItem.id)) return prev;
-      return [newItem.id, ...prev];
-    });
-  }, [route?.params?.newItem]);
+    // Tự động chọn các item mới được thêm vào
+    const unselectedNewItemIds = cartItems.filter(item => !selectedIds.includes(item.id)).map(item => item.id);
+    if (unselectedNewItemIds.length > 0) {
+      setSelectedIds(prev => [...prev, ...unselectedNewItemIds]);
+    }
+  }, [cartItems.length]);
 
   const allSelected = cartItems.length > 0 && selectedIds.length === cartItems.length;
 
@@ -98,18 +65,8 @@ const CartScreen = ({ navigation, route }) => {
     setSelectedIds(cartItems.map((item) => item.id));
   };
 
-  const updateQuantity = (id, delta) => {
-    setCartItems((prev) =>
-      prev.map((item) => {
-        if (item.id !== id) return item;
-        const nextQty = Math.max(1, item.quantity + delta);
-        return { ...item, quantity: nextQty };
-      })
-    );
-  };
-
-  const removeItem = (id) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== id));
+  const handleRemoveItem = (id) => {
+    removeItem(id);
     setSelectedIds((prev) => prev.filter((itemId) => itemId !== id));
   };
 
@@ -150,7 +107,7 @@ const CartScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => removeItem(item.id)} style={styles.deleteBtn}>
+        <TouchableOpacity onPress={() => handleRemoveItem(item.id)} style={styles.deleteBtn}>
           <Feather name="trash-2" size={22} color="#E74C3C" />
         </TouchableOpacity>
       </View>

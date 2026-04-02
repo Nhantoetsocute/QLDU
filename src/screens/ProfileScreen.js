@@ -22,28 +22,30 @@ const ORANGE_COLOR = '#E57905';
 const ProfileScreen = ({ navigation }) => {
   const { profile, avatarUri, updateProfile, updateAvatar } = useUserProfile();
 
-  const [originalProfile, setOriginalProfile] = useState(profile);
+  const [originalProfile, setOriginalProfile] = useState(profile || {});
 
   // Dữ liệu đang chỉnh sửa
-  const [name, setName] = useState(profile.name);
-  const [email, setEmail] = useState(profile.email);
-  const [phone, setPhone] = useState(profile.phone);
-  const [address, setAddress] = useState(profile.address);
+  const [name, setName] = useState(profile?.name || '');
+  const [email, setEmail] = useState(profile?.email || '');
+  const [phone, setPhone] = useState(profile?.phone || '');
+  const [address, setAddress] = useState(profile?.address || '');
 
   useEffect(() => {
-    setOriginalProfile(profile);
-    setName(profile.name);
-    setEmail(profile.email);
-    setPhone(profile.phone);
-    setAddress(profile.address);
+    if (profile) {
+      setOriginalProfile(profile);
+      setName(profile.name || '');
+      setEmail(profile.email || '');
+      setPhone(profile.phone || '');
+      setAddress(profile.address || '');
+    }
   }, [profile]);
 
   // Kiểm tra thay đổi để bật nút cập nhật
   const isChanged =
-    name.trim() !== originalProfile.name ||
-    email.trim() !== originalProfile.email ||
-    phone.trim() !== originalProfile.phone ||
-    address.trim() !== originalProfile.address;
+    name.trim() !== (originalProfile.name || '') ||
+    email.trim() !== (originalProfile.email || '') ||
+    phone.trim() !== (originalProfile.phone || '') ||
+    address.trim() !== (originalProfile.address || '');
 
   const handlePickAvatar = async () => {
     try {
@@ -116,10 +118,16 @@ const ProfileScreen = ({ navigation }) => {
           {/* KHU VỰC AVATAR */}
           <View style={styles.avatarContainer}>
             <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.85}>
-              <Image
-                source={typeof avatarUri === 'string' && avatarUri.trim() ? { uri: avatarUri } : require('../../assets/images/nhan.jpg')}
-                style={styles.avatar}
-              />
+              {typeof avatarUri === 'string' && avatarUri.trim() ? (
+                <Image
+                  source={{ uri: avatarUri }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#E5E7EB' }]}>
+                  <Ionicons name="person" size={50} color="#9CA3AF" />
+                </View>
+              )}
             </TouchableOpacity>
             {/* Nút Camera */}
             <TouchableOpacity style={styles.cameraButton} activeOpacity={0.8} onPress={handlePickAvatar}>

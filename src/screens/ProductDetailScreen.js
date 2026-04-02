@@ -12,14 +12,17 @@ import {
   TextInput,
   Alert,
   Modal,
+  Platform,
 } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/ThemeContext';
+import { useCart } from '../context/CartContext';
 
 const { width, height } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
+  const { addToCart } = useCart();
 
   // Lấy dữ liệu sản phẩm được truyền sang từ các trang trước
   // Nếu không có, dùng dữ liệu mẫu (phòng trường hợp lỗi)
@@ -175,7 +178,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   const handleConfirmCheckout = () => {
     if (checkoutMode === 'buy' && !deliveryAddress.trim()) {
-      Alert.alert('Thiếu địa chỉ', 'Vui lòng nhập địa chỉ nhận hàng.');
+      if (Platform.OS === 'web') window.alert('Vui lòng nhập địa chỉ nhận hàng.');
+      else Alert.alert('Thiếu địa chỉ', 'Vui lòng nhập địa chỉ nhận hàng.');
       return;
     }
 
@@ -183,72 +187,81 @@ const ProductDetailScreen = ({ route, navigation }) => {
     const paymentLabel = paymentMethod === 'vnpay' ? 'Thanh toán bằng VNPAY' : 'Thanh toán khi nhận hàng';
     const invoiceText = `Tạm tính: ${invoice.subtotal.toLocaleString('vi-VN')} đ\nGiảm giá voucher: -${invoice.discountAmount.toLocaleString('vi-VN')} đ\nPhí ship: ${invoice.baseShippingFee.toLocaleString('vi-VN')} đ\nGiảm phí ship: -${invoice.shippingDiscount.toLocaleString('vi-VN')} đ\nTổng thanh toán: ${invoice.finalTotal.toLocaleString('vi-VN')} đ`;
 
-    Alert.alert(
-      checkoutMode === 'buy' ? 'Xác nhận mua ngay' : 'Xác nhận thêm vào giỏ',
-      `${item.name} x${quantity}\nHình thức thanh toán: ${paymentLabel}\n\n${invoiceText}`,
-      [
-        { text: 'Huỷ', style: 'cancel' },
-        {
-          text: 'Xác nhận',
-          onPress: () => {
-            setVoucherModalVisible(false);
+    const proceedWithCheckout = () => {
+      setVoucherModalVisible(false);
 
-            if (checkoutMode === 'cart') {
-              const newCartItem = {
-                id: `cart-${Date.now()}`,
-                name: item.name,
-                price: parsePrice(item.price),
-                image: item.image,
-                quantity,
-              };
-              Alert.alert('Đã thêm vào giỏ', `Áp dụng ưu đãi thành công.\n\n${invoiceText}`);
-              navigation.navigate('Cart', { newItem: newCartItem });
-              return;
-            }
+      if (checkoutMode === 'cart') {
+        const newCartItem = {
+          id: item.id || `cart-${Date.now()}`,
+          name: item.name,
+          price: parsePrice(item.price),
+          image: item.image,
+          quantity,
+        };
+        addToCart(newCartItem);
+        if (Platform.OS === 'web') window.alert(`Áp dụng ưu đãi thành công.\n\n${invoiceText}`);
+        else Alert.alert('Đã thêm vào giỏ', `Áp dụng ưu đãi thành công.\n\n${invoiceText}`);
+        
+        navigation.navigate('Cart');
+        return;
+      }
 
-            // TẠO THÔNG TIN ĐƠN HÀNG
-            const now = new Date();
-            const hh = String(now.getHours()).padStart(2, '0');
-            const mm = String(now.getMinutes()).padStart(2, '0');
-            const dd = String(now.getDate()).padStart(2, '0');
-            const mo = String(now.getMonth() + 1).padStart(2, '0');
-            const yyyy = now.getFullYear();
-            const orderCode = `TJ-${now.getTime().toString().slice(-6)}`;
+      // TẠO THÔNG TIN ĐƠN HÀNG
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const mo = String(now.getMonth() + 1).padStart(2, '0');
+      const yyyy = now.getFullYear();
+      const orderCode = `TJ-${now.getTime().toString().slice(-6)}`;
 
-            const newOrder = {
-              id: orderCode,
-              date: `${hh}:${mm} • ${dd}/${mo}/${yyyy}`,
-              status: 'preparing',
-              type: 'Delivery',
-              total: `${invoice.finalTotal.toLocaleString('vi-VN')} đ`,
-              itemCount: quantity,
-              mainItem: item.name,
-              payment: paymentMethod === 'vnpay' ? 'Đã thanh toán (VNPAY)' : 'Thanh toán khi nhận',
-              address: deliveryAddress.trim(),
-              image: item.image,
-            };
+      const newOrder = {
+        id: orderCode,
+        date: `${hh}:${mm} • ${dd}/${mo}/${yyyy}`,
+        status: 'preparing',
+        type: 'Delivery',
+        total: `${invoice.finalTotal.toLocaleString('vi-VN')} đ`,
+        itemCount: quantity,
+        mainItem: item.name,
+        payment: paymentMethod === 'vnpay' ? 'Đã thanh toán (VNPAY)' : 'Thanh toán khi nhận',
+        address: deliveryAddress.trim(),
+        image: item.image,
+      };
 
-            // KIỂM TRA PHƯƠNG THỨC THANH TOÁN
-            if (paymentMethod === 'vnpay') {
-              // Nếu là VNPAY, chuyển hướng sang màn hình WebView thanh toán
-              navigation.push('VNPayScreen', {
-                amount: invoice.finalTotal,
-                orderInfo: `Thanh toan don hang ${orderCode}`,
-                newOrder: newOrder,
-              });
-            } else {
-              // Nếu là COD, hoàn tất ngay lập tức
-              setHasPurchased(true);
-              Alert.alert('Đặt hàng thành công', `Đơn hàng đang ở trạng thái: Đang chuẩn bị.\nHình thức thanh toán: ${paymentLabel}\n\n${invoiceText}`);
-              navigation.navigate('MainTabs', {
-                screen: 'Đặt Hàng',
-                params: { newOrder },
-              });
-            }
-          },
-        },
-      ]
-    );
+      // KIỂM TRA PHƯƠNG THỨC THANH TOÁN
+      if (paymentMethod === 'vnpay') {
+        navigation.push('VNPayScreen', {
+          amount: invoice.finalTotal,
+          orderInfo: `Thanh toan don hang ${orderCode}`,
+          newOrder: newOrder,
+        });
+      } else {
+        setHasPurchased(true);
+        if (Platform.OS === 'web') window.alert(`Đơn hàng đang ở trạng thái: Đang chuẩn bị.\nHình thức thanh toán: ${paymentLabel}\n\n${invoiceText}`);
+        else Alert.alert('Đặt hàng thành công', `Đơn hàng đang ở trạng thái: Đang chuẩn bị.\nHình thức thanh toán: ${paymentLabel}\n\n${invoiceText}`);
+        
+        navigation.navigate('MainTabs', {
+          screen: 'Đặt Hàng',
+          params: { newOrder },
+        });
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmMsg = `${item.name} x${quantity}\nHình thức thanh toán: ${paymentLabel}\n\n${invoiceText}\n\nBạn có muốn tiếp tục?`;
+      if (window.confirm(confirmMsg)) {
+        proceedWithCheckout();
+      }
+    } else {
+      Alert.alert(
+        checkoutMode === 'buy' ? 'Xác nhận mua ngay' : 'Xác nhận thêm vào giỏ',
+        `${item.name} x${quantity}\nHình thức thanh toán: ${paymentLabel}\n\n${invoiceText}`,
+        [
+          { text: 'Huỷ', style: 'cancel' },
+          { text: 'Xác nhận', onPress: proceedWithCheckout },
+        ]
+      );
+    }
   };
 
   return (

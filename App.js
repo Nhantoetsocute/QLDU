@@ -20,6 +20,7 @@ import HelpCenterScreen from './src/screens/HelpCenterScreen';
 import TermsScreen from './src/screens/TermsScreen';
 import { ThemeProvider, useAppTheme } from './src/theme/ThemeContext';
 import { UserProfileProvider } from './src/context/UserProfileContext';
+import { CartProvider } from './src/context/CartContext';
 // Đưa MainTabNavigator vào
 import MainTabNavigator from './src/navigation/MainTabNavigator'; 
 
@@ -59,7 +60,9 @@ export default function App() {
   return (
     <ThemeProvider>
       <UserProfileProvider>
-        <AppNavigator />
+        <CartProvider>
+          <AppNavigator />
+        </CartProvider>
       </UserProfileProvider>
     </ThemeProvider>
   );
