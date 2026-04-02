@@ -6,7 +6,7 @@ import { WebView } from 'react-native-webview';
 const CREATE_VNPAY_URL_API = 'https://your-backend-domain.com/api/vnpay/create-payment-url';
 
 const VNPayScreen = ({ route, navigation }) => {
-  const { amount, orderInfo, newOrder } = route.params || {};
+  const { amount, orderInfo, newOrder, reservationData } = route.params || {};
   const [paymentUrl, setPaymentUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -62,10 +62,19 @@ const VNPayScreen = ({ route, navigation }) => {
     const responseCode = getQueryParam(url, 'vnp_ResponseCode');
     if (responseCode === '00') {
       Alert.alert('Thành công', 'Thanh toán VNPAY thành công!');
-      navigation.navigate('MainTabs', {
-        screen: 'Đặt Hàng',
-        params: { newOrder },
-      });
+      if (reservationData?.storeId) {
+        navigation.navigate('MainTabs', {
+          screen: 'Cửa Hàng',
+          params: {
+            reservationResult: reservationData,
+          },
+        });
+      } else {
+        navigation.navigate('MainTabs', {
+          screen: 'Đặt Hàng',
+          params: { newOrder },
+        });
+      }
     } else {
       Alert.alert('Thất bại', 'Giao dịch bị huỷ hoặc có lỗi xảy ra.');
       navigation.goBack();

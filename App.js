@@ -10,7 +10,6 @@ import ProductDetailScreen from './src/screens/ProductDetailScreen';
 import OrderTrackingScreen from './src/screens/OrderTrackingScreen';
 import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
-import StoreScreen from './src/screens/StoreScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import OffersScreen from './src/screens/OffersScreen';
 import VNPayScreen from './src/screens/VNPayScreen';
@@ -41,7 +40,6 @@ const AppNavigator = () => {
         <Stack.Screen name="Cart" component={CartScreen} />
         <Stack.Screen name="OrderTracking" component={OrderTrackingScreen} />
         <Stack.Screen name="Menu" component={MenuScreen} />
-        <Stack.Screen name="Store" component={StoreScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Offers" component={OffersScreen} />
         <Stack.Screen name="VNPayScreen" component={VNPayScreen} />

@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, FontAwesome5, Feather } from '@expo/vector-icons';
+import { useAppTheme } from '../theme/ThemeContext';
 
 const { width } = Dimensions.get('window');
 const ORANGE_COLOR = '#E57905';
@@ -119,6 +120,33 @@ const categories = [
 const OffersScreen = ({ navigation, route }) => {
   const [activeTab, setActiveTab] = useState('privilege');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const { isDarkMode, colors } = useAppTheme();
+  const accent = colors.accent || ORANGE_COLOR;
+
+  const ui = {
+    screenBg: colors.background,
+    overlay: isDarkMode ? 'rgba(0,0,0,0.88)' : 'rgba(255,255,255,0.45)',
+    headerBorder: isDarkMode ? 'rgba(212,175,55,0.15)' : 'rgba(184,134,11,0.2)',
+    title: colors.text,
+    pointsChipBg: isDarkMode ? 'rgba(212,175,55,0.15)' : 'rgba(184,134,11,0.12)',
+    pointsChipBorder: isDarkMode ? 'rgba(212,175,55,0.3)' : 'rgba(184,134,11,0.25)',
+    catBg: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.72)',
+    catActiveBg: accent,
+    catIcon: accent,
+    catIconActive: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+    catText: colors.subText,
+    catTextActive: isDarkMode ? '#1A1A1A' : '#FFFFFF',
+    sectionTitle: colors.text,
+    cardBg: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.82)',
+    cardBorder: isDarkMode ? 'rgba(212,175,55,0.15)' : 'rgba(184,134,11,0.2)',
+    thumbBg: isDarkMode ? 'rgba(212,175,55,0.15)' : 'rgba(184,134,11,0.12)',
+    typeTagBg: isDarkMode ? 'rgba(0,0,0,0.8)' : 'rgba(17,24,39,0.85)',
+    typeTagText: accent,
+    discount: accent,
+    voucherTitle: colors.text,
+    voucherExpiry: colors.subText,
+    emptyText: colors.subText,
+  };
 
   useEffect(() => {
     const incomingCategory = route?.params?.category;
@@ -137,40 +165,40 @@ const OffersScreen = ({ navigation, route }) => {
 
   const renderVoucher = ({ item }) => (
     <Animated.View style={[styles.voucherWrapper, { opacity: fadeAnim }]}>
-      <TouchableOpacity style={styles.voucherCard} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.voucherCard, { backgroundColor: ui.cardBg, borderColor: ui.cardBorder }]} activeOpacity={0.8}>
         {/* Bên trái: Ảnh thu nhỏ (thumbnail) với loại dịch vụ và mức giảm */}
-        <View style={styles.thumbnailContainer}>
-           <View style={styles.typeTag}>
-              <Text style={styles.typeTagText}>{item.type}</Text>
+        <View style={[styles.thumbnailContainer, { backgroundColor: ui.thumbBg }]}>
+          <View style={[styles.typeTag, { backgroundColor: ui.typeTagBg }]}>
+            <Text style={[styles.typeTagText, { color: ui.typeTagText }]}>{item.type}</Text>
            </View>
-           <Text style={styles.discountTextBig}>{item.discountDisplay}</Text>
+          <Text style={[styles.discountTextBig, { color: ui.discount }]}>{item.discountDisplay}</Text>
         </View>
         
         {/* Bên phải: Thông tin phiếu */}
         <View style={styles.voucherInfo}>
-           <Text style={styles.voucherTitle}>{item.title}</Text>
-           <Text style={styles.voucherExpiry}>{item.expiry}</Text>
+          <Text style={[styles.voucherTitle, { color: ui.voucherTitle }]}>{item.title}</Text>
+          <Text style={[styles.voucherExpiry, { color: ui.voucherExpiry }]}>{item.expiry}</Text>
         </View>
       </TouchableOpacity>
     </Animated.View>
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" translucent />
+    <View style={[styles.container, { backgroundColor: ui.screenBg }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
       <ImageBackground 
         source={{ uri: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=800' }} 
         style={styles.bg}
       >
-        <View style={styles.overlay} />
+        <View style={[styles.overlay, { backgroundColor: ui.overlay }]} />
         
         <SafeAreaView style={{ flex: 1 }}>
           {/* HEADER */}
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Ưu đãi độc quyền</Text>
-            <View style={styles.pointsChip}>
-              <FontAwesome5 name="coins" size={14} color="#D4AF37" />
-              <Text style={styles.pointsText}>1.250 Bean</Text>
+          <View style={[styles.header, { borderBottomColor: ui.headerBorder }]}>
+            <Text style={[styles.headerTitle, { color: ui.title }]}>Ưu đãi độc quyền</Text>
+            <View style={[styles.pointsChip, { backgroundColor: ui.pointsChipBg, borderColor: ui.pointsChipBorder }]}> 
+              <FontAwesome5 name="coins" size={14} color={accent} />
+              <Text style={[styles.pointsText, { color: accent }]}>1.250 Bean</Text>
             </View>
           </View>
 
@@ -179,7 +207,11 @@ const OffersScreen = ({ navigation, route }) => {
             {categories.map((cat) => (
               <TouchableOpacity 
                 key={cat.id} 
-                style={[styles.catBtn, activeTab === cat.id && styles.catBtnActive]}
+                style={[
+                  styles.catBtn,
+                  { backgroundColor: ui.catBg },
+                  activeTab === cat.id && [styles.catBtnActive, { backgroundColor: ui.catActiveBg }],
+                ]}
                 onPress={() => {
                   fadeAnim.setValue(0);
                   setActiveTab(cat.id);
@@ -188,9 +220,9 @@ const OffersScreen = ({ navigation, route }) => {
                 <MaterialCommunityIcons 
                   name={cat.icon} 
                   size={24} 
-                  color={activeTab === cat.id ? "#1A1A1A" : "#D4AF37"} 
+                  color={activeTab === cat.id ? ui.catIconActive : ui.catIcon} 
                 />
-                <Text style={[styles.catText, { color: activeTab === cat.id ? "#1A1A1A" : "#A9A9A9" }]}>
+                <Text style={[styles.catText, { color: activeTab === cat.id ? ui.catTextActive : ui.catText }]}>
                   {cat.name}
                 </Text>
               </TouchableOpacity>
@@ -199,7 +231,7 @@ const OffersScreen = ({ navigation, route }) => {
 
           {/* SẴN SÀNG SỬ DỤNG */}
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Sẵn sàng sử dụng</Text>
+            <Text style={[styles.sectionTitle, { color: ui.sectionTitle }]}>Sẵn sàng sử dụng</Text>
           </View>
 
           {/* DANH SÁCH VOUCHER */}
@@ -210,7 +242,7 @@ const OffersScreen = ({ navigation, route }) => {
             contentContainerStyle={styles.listPadding}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
-                <Text style={styles.emptyText}>Hiện chưa có ưu đãi trong mục này.</Text>
+                <Text style={[styles.emptyText, { color: ui.emptyText }]}>Hiện chưa có ưu đãi trong mục này.</Text>
             }
           />
         </SafeAreaView>
@@ -220,9 +252,9 @@ const OffersScreen = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1 },
   bg: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.88)' },
+  overlay: { ...StyleSheet.absoluteFillObject },
   
   header: { 
     flexDirection: 'row', 
@@ -231,20 +263,17 @@ const styles = StyleSheet.create({
     padding: 20, 
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight + 10 : 10,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(212,175,55,0.15)',
   },
-  headerTitle: { fontSize: 24, fontWeight: '800', color: '#FFF', letterSpacing: 1 },
+  headerTitle: { fontSize: 24, fontWeight: '800', letterSpacing: 1 },
   pointsChip: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    backgroundColor: 'rgba(212,175,55,0.15)', 
     paddingHorizontal: 12, 
     paddingVertical: 6, 
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(212,175,55,0.3)'
   },
-  pointsText: { color: '#D4AF37', fontWeight: 'bold', marginLeft: 6, fontSize: 13 },
+  pointsText: { fontWeight: 'bold', marginLeft: 6, fontSize: 13 },
 
   catContainer: { 
     flexDirection: 'row', 
@@ -257,9 +286,8 @@ const styles = StyleSheet.create({
     width: (width - 60) / 4, 
     paddingVertical: 12, 
     borderRadius: 15,
-    backgroundColor: 'rgba(255,255,255,0.05)'
   },
-  catBtnActive: { backgroundColor: '#D4AF37' },
+  catBtnActive: {},
   catText: { fontSize: 11, fontWeight: '700', marginTop: 6, textAlign: 'center' },
 
   sectionHeader: {
@@ -269,18 +297,15 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFF',
   },
 
   listPadding: { paddingHorizontal: 20, paddingBottom: 100 },
   voucherWrapper: { marginBottom: 15 },
   voucherCard: { 
     flexDirection: 'row', 
-    backgroundColor: 'rgba(255,255,255,0.05)', // Kính mờ nhẹ
     borderRadius: 16, 
     padding: 12,
     borderWidth: 1, 
-    borderColor: 'rgba(212,175,55,0.15)',
     elevation: 5,
     shadowColor: '#000',
     shadowOpacity: 0.2,
@@ -290,7 +315,6 @@ const styles = StyleSheet.create({
   thumbnailContainer: {
     width: 60,
     height: 60,
-    backgroundColor: 'rgba(212,175,55,0.15)', // Cam nhạt
     borderRadius: 12,
     marginRight: 15,
     justifyContent: 'center',
@@ -301,19 +325,16 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 5,
     left: 5,
-    backgroundColor: 'rgba(0,0,0,0.8)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   typeTagText: {
-    color: '#D4AF37',
     fontSize: 8,
     fontWeight: '800',
     letterSpacing: 0.5,
   },
   discountTextBig: {
-    color: '#D4AF37',
     fontSize: 18,
     fontWeight: '900',
     textAlign: 'center',
@@ -324,18 +345,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   voucherTitle: {
-    color: '#FFF',
     fontSize: 13,
     fontWeight: 'bold',
     marginBottom: 4,
     lineHeight: 18,
   },
   voucherExpiry: {
-    color: '#888',
     fontSize: 11,
     fontWeight: '600',
   },
-  emptyText: { color: '#888', textAlign: 'center', marginTop: 50, fontStyle: 'italic' }
+  emptyText: { textAlign: 'center', marginTop: 50, fontStyle: 'italic' }
 });
 
 export default OffersScreen;

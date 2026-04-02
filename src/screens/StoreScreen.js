@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  TextInput,
   Modal,
   Linking,
   StatusBar,
@@ -120,7 +121,7 @@ const mockStores = [
   }
 ];
 
-const StoreScreen = ({ navigation }) => {
+const StoreScreen = ({ navigation, route }) => {
   // Mock fallback cho Theme Context nếu bạn chưa cấu hình hoàn chỉnh
   const { isDarkMode = false, colors = { background: '#FAFAFA', accent: ORANGE_COLOR } } = useAppTheme?.() || {};
   const [selectedStore, setSelectedStore] = useState(null);
@@ -129,6 +130,8 @@ const StoreScreen = ({ navigation }) => {
   const [selectedTableNo, setSelectedTableNo] = useState(null);
   const [reservedMap, setReservedMap] = useState({});
   const [myReservations, setMyReservations] = useState([]);
+  const [isSearchVisible, setIsSearchVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const ui = {
     containerBg: isDarkMode ? colors.background : '#FAFAFA',
@@ -141,7 +144,60 @@ const StoreScreen = ({ navigation }) => {
     modalBg: isDarkMode ? 'rgba(20,20,20,0.98)' : '#FFFFFF',
     modalText: isDarkMode ? '#FFFFFF' : '#000000',
     modalSubText: isDarkMode ? '#A9A9A9' : '#444444',
+    searchBg: isDarkMode ? 'rgba(255,255,255,0.06)' : '#FFFFFF',
+    searchBorder: isDarkMode ? 'rgba(212,175,55,0.18)' : '#E5E7EB',
+    searchText: isDarkMode ? '#FFFFFF' : '#111827',
+    searchPlaceholder: isDarkMode ? '#A9A9A9' : '#6B7280',
   };
+
+  const filteredStores = mockStores.filter((store) => {
+    const keyword = searchQuery.trim().toLowerCase();
+    if (!keyword) return true;
+    return (
+      store.name.toLowerCase().includes(keyword) ||
+      store.address.toLowerCase().includes(keyword)
+    );
+  });
+
+  const handlePressSearch = () => {
+    if (isSearchVisible) {
+      if (searchQuery.trim()) {
+        setSearchQuery('');
+        return;
+      }
+      setIsSearchVisible(false);
+      return;
+    }
+    setIsSearchVisible(true);
+  };
+
+  useEffect(() => {
+    const reservationResult = route?.params?.reservationResult;
+    if (!reservationResult?.storeId || !reservationResult?.timeSlot || !reservationResult?.tableNo) return;
+
+    const key = `${reservationResult.storeId}-${reservationResult.timeSlot}-${reservationResult.tableNo}`;
+    setReservedMap((prev) => ({ ...prev, [key]: true }));
+    setMyReservations((prev) => {
+      const filtered = prev.filter(
+        (r) => !(r.storeId === reservationResult.storeId && r.timeSlot === reservationResult.timeSlot)
+      );
+      return [
+        ...filtered,
+        {
+          storeId: reservationResult.storeId,
+          storeName: reservationResult.storeName,
+          tableNo: reservationResult.tableNo,
+          timeSlot: reservationResult.timeSlot,
+        },
+      ];
+    });
+    setSelectedTimeSlot(reservationResult.timeSlot);
+    setSelectedTableNo(reservationResult.tableNo);
+
+    if (route?.params?.reservationResult) {
+      navigation.setParams({ reservationResult: null });
+    }
+  }, [navigation, route?.params?.reservationResult]);
 
   const openStoreDetail = (store) => {
     setSelectedStore(store);
@@ -205,29 +261,40 @@ const StoreScreen = ({ navigation }) => {
       [
         { text: 'Huỷ', style: 'cancel' },
         {
-          text: 'Xác nhận',
+          text: 'Thanh toán VNPAY',
           onPress: () => {
-            const key = `${store.id}-${selectedTimeSlot}-${selectedTableNo}`;
-            setReservedMap((prev) => ({ ...prev, [key]: true }));
-            setMyReservations((prev) => {
-              const filtered = prev.filter(
-                (r) => !(r.storeId === store.id && r.timeSlot === selectedTimeSlot)
-              );
-              return [
-                ...filtered,
-                {
-                  storeId: store.id,
-                  storeName: store.name,
-                  tableNo: selectedTableNo,
-                  timeSlot: selectedTimeSlot,
-                },
-              ];
+            const now = new Date();
+            const hh = String(now.getHours()).padStart(2, '0');
+            const mm = String(now.getMinutes()).padStart(2, '0');
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mo = String(now.getMonth() + 1).padStart(2, '0');
+            const yyyy = now.getFullYear();
+            const reservationCode = `TB-${now.getTime().toString().slice(-6)}`;
+
+            const newOrder = {
+              id: reservationCode,
+              date: `${hh}:${mm} • ${dd}/${mo}/${yyyy}`,
+              status: 'preparing',
+              type: 'Table Reservation',
+              total: `${DEPOSIT_AMOUNT.toLocaleString('vi-VN')} đ`,
+              itemCount: 1,
+              mainItem: `Đặt bàn ${selectedTableNo} • ${selectedTimeSlot}`,
+              payment: 'Đã thanh toán (VNPAY)',
+              address: store.address,
+              image: store.image,
+            };
+
+            navigation.push('VNPayScreen', {
+              amount: DEPOSIT_AMOUNT,
+              orderInfo: `Dat coc ban ${selectedTableNo} ${selectedTimeSlot} - ${store.name}`,
+              newOrder,
+              reservationData: {
+                storeId: store.id,
+                storeName: store.name,
+                tableNo: selectedTableNo,
+                timeSlot: selectedTimeSlot,
+              },
             });
-            Alert.alert(
-              'Đặt bàn thành công',
-              `Đã giữ chỗ bàn ${selectedTableNo} (${selectedTimeSlot}) tại ${store.name}.\nBạn đã cọc ${DEPOSIT_AMOUNT.toLocaleString('vi-VN')} đồng.`
-            );
-            setSelectedTableNo(null);
           },
         },
       ]
@@ -308,10 +375,27 @@ const StoreScreen = ({ navigation }) => {
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: ui.headerBg, borderBottomColor: ui.headerBorder }]}>
         <Text style={[styles.headerTitle, { color: ui.headerText }]}>Hệ thống cửa hàng</Text>
-        <TouchableOpacity style={styles.searchBtn}>
-          <Feather name="search" size={24} color={ui.headerText} />
+        <TouchableOpacity style={styles.searchBtn} onPress={handlePressSearch} activeOpacity={0.8}>
+          <Feather name={isSearchVisible ? 'x' : 'search'} size={24} color={ui.headerText} />
         </TouchableOpacity>
       </View>
+
+      {isSearchVisible ? (
+        <View style={[styles.searchWrap, { backgroundColor: ui.headerBg, borderBottomColor: ui.headerBorder }]}>
+          <View style={[styles.searchInputBox, { backgroundColor: ui.searchBg, borderColor: ui.searchBorder }]}>
+            <Feather name="search" size={18} color={ui.searchPlaceholder} />
+            <TextInput
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Tìm theo tên hoặc địa chỉ cửa hàng"
+              placeholderTextColor={ui.searchPlaceholder}
+              style={[styles.searchInput, { color: ui.searchText }]}
+              autoFocus
+              returnKeyType="search"
+            />
+          </View>
+        </View>
+      ) : null}
 
       {/* BẢN ĐỒ HIỂN THỊ TẤT CẢ CỬA HÀNG */}
       <View style={styles.mapWrapper}>
@@ -324,7 +408,7 @@ const StoreScreen = ({ navigation }) => {
             longitudeDelta: 0.1,
           }}
         >
-          {mockStores.map((store) => (
+          {filteredStores.map((store) => (
             <Marker
               key={store.id}
               coordinate={{
@@ -343,13 +427,14 @@ const StoreScreen = ({ navigation }) => {
       <View style={styles.listWrapper}>
         <Text style={[styles.listTitle, { color: ui.headerText }]}>Cửa hàng gần bạn</Text>
         <FlatList
-          data={mockStores}
+          data={filteredStores}
           keyExtractor={(item) => item.id}
           renderItem={renderStoreCard}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={true}
           scrollEnabled={true}
           nestedScrollEnabled={true}
+          ListEmptyComponent={<Text style={[styles.emptySearchText, { color: ui.cardSubText }]}>Không tìm thấy cửa hàng phù hợp.</Text>}
         />
       </View>
 
@@ -548,6 +633,25 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 22, fontWeight: 'bold' },
   searchBtn: { padding: 5 },
+  searchWrap: {
+    paddingHorizontal: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+  },
+  searchInputBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 8,
+    fontSize: 14,
+    paddingVertical: 0,
+  },
   mapWrapper: {
     height: 300,
     borderBottomWidth: 1,
@@ -564,6 +668,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   listContent: { paddingBottom: 20 },
+  emptySearchText: {
+    textAlign: 'center',
+    fontSize: 14,
+    marginTop: 20,
+    fontStyle: 'italic',
+  },
   storeCard: {
     borderRadius: 16,
     padding: 15,
