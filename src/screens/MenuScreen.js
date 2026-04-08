@@ -79,7 +79,7 @@ const MenuScreen = ({ navigation }) => {
               </View>
             )}
             <View style={styles.profileInfo}>
-              <Text style={[styles.profileName, { color: theme.text }]}>{profile?.name || "Thành viên mới"}</Text>
+              <Text style={[styles.profileName, { color: theme.text }]}>{profile?.name || profile?.userName || "Thành viên mới"}</Text>
               <Text style={[styles.profileMember, { color: theme.gold }]}>Thành viên Vàng (Gold)</Text>
             </View>
             <TouchableOpacity
