@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useUserProfile } from '../context/UserProfileContext';
+import { apiUrl } from '../config/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -64,12 +65,12 @@ const Petal = ({ delay, startX }) => {
   );
 };
 
-const FallingBlossoms = () => {
+const FallingBlossoms = React.memo(() => {
   const petals = Array.from({ length: 20 }).map((_, i) => (
     <Petal key={i} delay={Math.random() * 5000} startX={Math.random() * width} />
   ));
   return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{petals}</View>;
-};
+});
 
 const LoginScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
@@ -78,6 +79,7 @@ const LoginScreen = ({ navigation }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -85,14 +87,22 @@ const LoginScreen = ({ navigation }) => {
       return;
     }
 
+    setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 giây timeout
+
     try {
-      const API_URL = 'http://192.168.1.20:3000/api/auth/login';
+      const API_URL = apiUrl('/api/auth/login');
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: username, password: password })
+        body: JSON.stringify({ email: username, password: password }),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       const data = await response.json();
+      
       if (response.ok) {
         await loginContext(data.token, data.user);
         navigation?.replace('MainTabs');
@@ -100,8 +110,15 @@ const LoginScreen = ({ navigation }) => {
         Alert.alert("Từ chối!", data.error || "Sai tài khoản hoặc mật khẩu");
       }
     } catch (error) {
+       clearTimeout(timeoutId);
        console.error(error);
-       Alert.alert("Lỗi Mạng", "Không kết nối được máy chủ Backend!");
+       if (error.name === 'AbortError') {
+         Alert.alert("Lỗi Mạng", "Yêu cầu quá hạn. Máy chủ không phản hồi!");
+       } else {
+         Alert.alert("Lỗi Mạng", "Không kết nối được máy chủ Backend!");
+       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -129,6 +146,7 @@ const LoginScreen = ({ navigation }) => {
                 placeholderTextColor="#A9A9A9"
                 value={username}
                 onChangeText={setUsername}
+                editable={!isLoading}
               />
             </View>
             <View style={styles.inputWrapper}>
@@ -140,8 +158,9 @@ const LoginScreen = ({ navigation }) => {
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
+                editable={!isLoading}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={isLoading}>
                 <Ionicons
                   name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                   size={20}
@@ -149,16 +168,24 @@ const LoginScreen = ({ navigation }) => {
                 />
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation?.navigate('ForgotPassword')}>
+            <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation?.navigate('ForgotPassword')} disabled={isLoading}>
               <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-              <Text style={styles.loginButtonText}>BẮT ĐẦU HÀNH TRÌNH</Text>
+            <TouchableOpacity 
+              style={[styles.loginButton, isLoading && { opacity: 0.7 }]} 
+              onPress={handleLogin}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <Text style={styles.loginButtonText}>ĐANG XỬ LÝ...</Text>
+              ) : (
+                <Text style={styles.loginButtonText}>BẮT ĐẦU HÀNH TRÌNH</Text>
+              )}
             </TouchableOpacity>
           </View>
           <View style={styles.signupContainer}>
             <Text style={styles.signupText}>Chưa có thẻ thành viên? </Text>
-            <TouchableOpacity onPress={() => navigation?.navigate('SignUp')}>
+            <TouchableOpacity onPress={() => navigation?.navigate('SignUp')} disabled={isLoading}>
               <Text style={styles.signupLink}>Tạo ngay</Text>
             </TouchableOpacity>
           </View>

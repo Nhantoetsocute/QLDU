@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/ThemeContext';
+import { apiUrl } from '../config/api';
 
 const { width, height } = Dimensions.get('window');
 
@@ -73,7 +74,7 @@ const Particle = ({ delay, startX, size }) => {
   );
 };
 
-const FloatingGoldDust = () => {
+const FloatingGoldDust = React.memo(() => {
   const particles = Array.from({ length: 30 }).map((_, i) => (
     <Particle 
       key={i} 
@@ -83,7 +84,7 @@ const FloatingGoldDust = () => {
     />
   ));
   return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{particles}</View>;
-};
+});
 
 const SignUpScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
@@ -93,6 +94,7 @@ const SignUpScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
     if (!fullName || !email || !password) {
@@ -100,8 +102,12 @@ const SignUpScreen = ({ navigation }) => {
       return;
     }
 
+    setIsLoading(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 giây timeout
+
     try {
-      const API_URL = 'http://192.168.1.20:3000/api/auth/register'; 
+      const API_URL = apiUrl('/api/auth/register');
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -110,10 +116,13 @@ const SignUpScreen = ({ navigation }) => {
           email: email,
           password: password,
           phone: phone
-        })
+        }),
+        signal: controller.signal
       });
 
+      clearTimeout(timeoutId);
       const data = await response.json();
+      
       if (response.ok) {
         Alert.alert("Thành công!", "Khởi tạo thành viên thành công! Mời bạn đăng nhập.", [
           { text: "Đăng nhập ngay", onPress: () => navigation?.navigate('Login') }
@@ -122,8 +131,15 @@ const SignUpScreen = ({ navigation }) => {
         Alert.alert("Đăng ký thất bại", data.error || "Gặp sự cố khi kết nối!");
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       console.error(error);
-      Alert.alert("Lỗi mạng", "Cổng kết nối bị đóng. Hãy kiểm tra địa chỉ IPv4.");
+      if (error.name === 'AbortError') {
+        Alert.alert("Lỗi mạng", "Yêu cầu quá hạn. Máy chủ không phản hồi!");
+      } else {
+        Alert.alert("Lỗi mạng", "Cổng kết nối bị đóng. Hãy kiểm tra địa chỉ IPv4.");
+      }
+    } finally {
+        setIsLoading(false);
     }
   };
 
@@ -144,7 +160,7 @@ const SignUpScreen = ({ navigation }) => {
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack()} disabled={isLoading}>
               <Ionicons name="chevron-back" size={32} color="#D4AF37" />
             </TouchableOpacity>
 
@@ -162,6 +178,7 @@ const SignUpScreen = ({ navigation }) => {
                   placeholderTextColor="#A9A9A9"
                   value={fullName}
                   onChangeText={setFullName}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -174,6 +191,7 @@ const SignUpScreen = ({ navigation }) => {
                   keyboardType="phone-pad"
                   value={phone}
                   onChangeText={setPhone}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -187,6 +205,7 @@ const SignUpScreen = ({ navigation }) => {
                   autoCapitalize="none"
                   value={email}
                   onChangeText={setEmail}
+                  editable={!isLoading}
                 />
               </View>
 
@@ -199,8 +218,9 @@ const SignUpScreen = ({ navigation }) => {
                   secureTextEntry={!showPassword}
                   value={password}
                   onChangeText={setPassword}
+                  editable={!isLoading}
                 />
-                <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={isLoading}>
                   <Ionicons
                     name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                     size={20}
@@ -209,14 +229,22 @@ const SignUpScreen = ({ navigation }) => {
                 </TouchableOpacity>
               </View>
 
-              <TouchableOpacity style={styles.submitButton} onPress={handleRegister}>
-                <Text style={styles.submitButtonText}>MỞ KHÓA ĐẶC QUYỀN</Text>
+              <TouchableOpacity 
+                style={[styles.submitButton, isLoading && { opacity: 0.7 }]} 
+                onPress={handleRegister}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Text style={styles.submitButtonText}>ĐANG XỬ LÝ...</Text>
+                ) : (
+                  <Text style={styles.submitButtonText}>MỞ KHÓA ĐẶC QUYỀN</Text>
+                )}
               </TouchableOpacity>
             </View>
 
             <View style={styles.loginContainer}>
               <Text style={styles.loginText}>Đã sở hữu thẻ thành viên? </Text>
-              <TouchableOpacity onPress={() => navigation?.navigate('Login')}>
+              <TouchableOpacity onPress={() => navigation?.navigate('Login')} disabled={isLoading}>
                 <Text style={styles.loginLink}>Đăng nhập</Text>
               </TouchableOpacity>
             </View>
