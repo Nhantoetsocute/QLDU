@@ -263,7 +263,10 @@ const HomeScreen = ({ navigation }) => {
                 <View style={styles.heroTextContainer}>
                   <Text style={[styles.heroTitle, { color: '#FFFFFF' }]}>Trà đào cam xả</Text>
                   <Text style={[styles.heroSubtitle, { color: '#F1F5F9' }]}>Sự hòa quyện của nghệ thuật và hương vị.</Text>
-                  <TouchableOpacity style={styles.heroButton}>
+                  <TouchableOpacity 
+                    style={styles.heroButton}
+                    onPress={() => navigation.navigate('ProductDetail', { item: premiumProducts.find(p => p.id === '2') })}
+                  >
                     <Text style={styles.heroButtonText}>THỬ NGAY</Text>
                     <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
                   </TouchableOpacity>
