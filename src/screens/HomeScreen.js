@@ -75,12 +75,12 @@ const Sparkle = ({ delay, startX, startY, size }) => {
 
 const AmbientSparkles = React.memo(() => {
   const sparkles = Array.from({ length: 20 }).map((_, i) => (
-    <Sparkle 
-      key={i} 
-      delay={Math.random() * 5000} 
-      startX={Math.random() * width} 
+    <Sparkle
+      key={i}
+      delay={Math.random() * 5000}
+      startX={Math.random() * width}
       startY={height + Math.random() * 200}
-      size={1 + Math.random() * 3} 
+      size={1 + Math.random() * 3}
     />
   ));
   return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{sparkles}</View>;
@@ -113,7 +113,7 @@ const premiumProducts = [
     id: 3,
     name: 'Trà Chanh',
     price: 35000,
-    image: require('../../assets/images/tra_chanh.webp'),
+    image: require('../../assets/images/TC.avif'),
     description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì, dễ uống mọi thời điểm.',
   },
   {
@@ -127,7 +127,7 @@ const premiumProducts = [
     id: 5,
     name: 'Cà phê sữa đá',
     price: 29000,
-    image: require('../../assets/images/cold_brew.jpg'),
+    image: require('../../assets/images/CPSD.webp'),
     description: 'Cà phê pha phin truyền thống thơm lừng kết hợp cùng sữa đặc béo ngậy.',
   },
 ];
@@ -145,7 +145,7 @@ const heroBanners = [
     badge: 'BEST SELLER',
     title: 'Cà phê sữa đá',
     subtitle: 'Hương vị tuổi trẻ, đậm đà nhưng ngọt bùi.',
-    image: require('../../assets/images/cold_brew.jpg'),
+    image: require('../../assets/images/CPSD.webp'),
   },
   {
     id: 1,
@@ -168,7 +168,7 @@ const HomeScreen = ({ navigation }) => {
     if (hour >= 17 && hour < 21) return 'Chào buổi tối,';
     return 'Khuya rồi nhé,';
   };
-  
+
   const ui = {
     overlay: isDarkMode ? 'rgba(10, 10, 10, 0.78)' : 'rgba(255, 255, 255, 0.38)',
     glassHeaderBg: isDarkMode ? 'rgba(255, 255, 255, 0.04)' : 'rgba(255, 255, 255, 0.58)',
@@ -198,9 +198,9 @@ const HomeScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }] }>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      
+
       {/* Background tối sang trọng */}
       <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=800&auto=format&fit=crop' }}
@@ -211,10 +211,10 @@ const HomeScreen = ({ navigation }) => {
 
         {/* --- HEADER KÍNH MỜ --- */}
         <SafeAreaView>
-          <View style={[styles.glassHeader, { backgroundColor: ui.glassHeaderBg, borderBottomColor: ui.cardBorder }] }>
+          <View style={[styles.glassHeader, { backgroundColor: ui.glassHeaderBg, borderBottomColor: ui.cardBorder }]}>
             {/* Bọc khu vực Profile bằng TouchableOpacity để bắt sự kiện đăng xuất */}
-            <TouchableOpacity 
-              style={styles.userInfo} 
+            <TouchableOpacity
+              style={styles.userInfo}
               onPress={() => {
                 Alert.alert(
                   'Đăng xuất',
@@ -235,9 +235,9 @@ const HomeScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               {profile?.avatar ? (
-                <Image 
-                  source={{ uri: profile.avatar }} 
-                  style={styles.avatar} 
+                <Image
+                  source={{ uri: profile.avatar }}
+                  style={styles.avatar}
                 />
               ) : (
                 <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(212, 175, 55, 0.2)' }]}>
@@ -256,7 +256,7 @@ const HomeScreen = ({ navigation }) => {
                 <Text style={[styles.logoutHint, { color: ui.textSecondary }]}>Chạm để đăng xuất</Text>
               </View>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[styles.cartButton, { borderColor: ui.cardBorder }]}
               onPress={() => {
@@ -279,7 +279,7 @@ const HomeScreen = ({ navigation }) => {
         </SafeAreaView>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          
+
           {/* HERO SECTION: BANNER TRƯỢT */}
           <View style={styles.heroSection}>
             <FlatList
@@ -292,19 +292,19 @@ const HomeScreen = ({ navigation }) => {
               contentContainerStyle={{ paddingLeft: 20, paddingRight: 0 }}
               renderItem={({ item }) => (
                 <View style={{ width: width - 40, marginRight: 20 }}>
-                  <ImageBackground 
-                    source={item.image} 
+                  <ImageBackground
+                    source={item.image}
                     style={styles.heroImageCard}
                     imageStyle={{ borderRadius: 24 }}
                   >
-                    <View style={[styles.heroOverlay, { backgroundColor: ui.heroMask }] }>
+                    <View style={[styles.heroOverlay, { backgroundColor: ui.heroMask }]}>
                       <View style={styles.badgePremium}>
                         <Text style={styles.badgePremiumText}>{item.badge}</Text>
                       </View>
                       <View style={styles.heroTextContainer}>
                         <Text style={[styles.heroTitle, { color: '#FFFFFF' }]}>{item.title}</Text>
                         <Text style={[styles.heroSubtitle, { color: '#F1F5F9' }]}>{item.subtitle}</Text>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                           style={styles.heroButton}
                           onPress={() => {
                             const product = premiumProducts.find(p => p.id === item.id);
@@ -358,21 +358,21 @@ const HomeScreen = ({ navigation }) => {
                     <Text style={styles.premiumPrice}>
                       {typeof item.price === 'number' ? `${item.price.toLocaleString('vi-VN')} đ` : item.price}
                     </Text>
-                    <TouchableOpacity 
+                    <TouchableOpacity
                       style={styles.goldAddButton}
                       onPress={() => {
-                        const numericPrice = typeof item.price === 'number' ? item.price : 
-                            Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
+                        const numericPrice = typeof item.price === 'number' ? item.price :
+                          Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
                         addToCart({
-                           id: item.id,
-                           name: item.name,
-                           price: numericPrice,
-                           image: item.image,
-                           quantity: 1
+                          id: item.id,
+                          name: item.name,
+                          price: numericPrice,
+                          image: item.image,
+                          quantity: 1
                         });
                         const msg = `Đã thêm ${item.name} vào giỏ hàng`;
                         if (Platform.OS === 'web') window.alert(msg);
-                        else Alert.alert('Thành công', msg); 
+                        else Alert.alert('Thành công', msg);
                       }}
                     >
                       <Ionicons name="add" size={18} color="#1A1A1A" />
