@@ -13,8 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
 
-const initialCartData = [];
-
 const formatPrice = (price) => `${price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')} đ`;
 
 const CartScreen = ({ navigation, route }) => {
@@ -143,7 +141,14 @@ const CartScreen = ({ navigation, route }) => {
 
       <View style={[styles.bottomBar, { backgroundColor: ui.surface, borderTopColor: ui.border }]}>
         <Text style={[styles.totalLabel, { color: ui.text }]}>Tổng tiền: {formatPrice(total)}</Text>
-        <TouchableOpacity style={[styles.checkoutBtn, { backgroundColor: accent }]}>
+        <TouchableOpacity
+          style={[styles.checkoutBtn, { backgroundColor: accent, opacity: cartItems.length === 0 ? 0.5 : 1 }]}
+          onPress={() => {
+            if (cartItems.length === 0) return;
+            navigation.navigate('Checkout');
+          }}
+          disabled={cartItems.length === 0}
+        >
           <Text style={styles.checkoutText}>Thanh toán</Text>
         </TouchableOpacity>
       </View>
