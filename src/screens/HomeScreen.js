@@ -73,7 +73,7 @@ const Sparkle = ({ delay, startX, startY, size }) => {
   );
 };
 
-const AmbientSparkles = () => {
+const AmbientSparkles = React.memo(() => {
   const sparkles = Array.from({ length: 20 }).map((_, i) => (
     <Sparkle 
       key={i} 
@@ -84,7 +84,7 @@ const AmbientSparkles = () => {
     />
   ));
   return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{sparkles}</View>;
-};
+});
 
 // --- DỮ LIỆU MẪU (Mock Data - Phiên bản cao cấp) ---
 const categories = [
@@ -129,6 +129,14 @@ const HomeScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const { profile, logoutContext } = useUserProfile();
   const { cartItems, addToCart } = useCart();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'Chào buổi sáng,';
+    if (hour >= 12 && hour < 17) return 'Chào buổi chiều,';
+    if (hour >= 17 && hour < 21) return 'Chào buổi tối,';
+    return 'Khuya rồi nhé,';
+  };
   
   const ui = {
     overlay: isDarkMode ? 'rgba(10, 10, 10, 0.78)' : 'rgba(255, 255, 255, 0.38)',
@@ -176,9 +184,22 @@ const HomeScreen = ({ navigation }) => {
             {/* Bọc khu vực Profile bằng TouchableOpacity để bắt sự kiện đăng xuất */}
             <TouchableOpacity 
               style={styles.userInfo} 
-              onPress={async () => {
-                await logoutContext();
-                navigation.replace('Login');
+              onPress={() => {
+                Alert.alert(
+                  'Đăng xuất',
+                  'Bạn có chắc chắn muốn đăng xuất?',
+                  [
+                    { text: 'Hủy', style: 'cancel' },
+                    {
+                      text: 'Đăng xuất',
+                      style: 'destructive',
+                      onPress: async () => {
+                        await logoutContext();
+                        navigation.replace('Login');
+                      },
+                    },
+                  ]
+                );
               }}
               activeOpacity={0.7}
             >
@@ -193,7 +214,7 @@ const HomeScreen = ({ navigation }) => {
                 </View>
               )}
               <View>
-                <Text style={[styles.greeting, { color: ui.textSecondary }]}>Chào buổi sáng,</Text>
+                <Text style={[styles.greeting, { color: ui.textSecondary }]}>{getGreeting()}</Text>
                 <View style={styles.nameRow}>
                   <Text style={[styles.userName, { color: ui.textPrimary }]} numberOfLines={1}>
                     {profile?.name || 'Khách'}
