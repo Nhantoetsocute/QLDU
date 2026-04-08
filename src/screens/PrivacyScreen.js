@@ -41,7 +41,7 @@ const privacySections = [
     content: 'Bạn có quyền yêu cầu xóa toàn bộ dữ liệu cá nhân bất cứ lúc nào:\n\n• Liên hệ qua email: support@truejuice.vn\n• Gọi hotline: 1900 6868\n• Thời gian xử lý: 3–5 ngày làm việc\n\nSau khi xóa, tài khoản sẽ không thể khôi phục.',
   },
   {
-    icon: 'cookie-outline',
+    icon: 'nutrition-outline',
     title: '5. Cookie & Tracking',
     content: 'Ứng dụng True Juice sử dụng AsyncStorage (lưu trữ cục bộ) để:\n\n• Giữ phiên đăng nhập\n• Lưu cài đặt giao diện (sáng/tối)\n• Lưu giỏ hàng tạm thời\n\nChúng tôi KHÔNG sử dụng cookie theo dõi hành vi hoặc quảng cáo cá nhân hóa.',
   },

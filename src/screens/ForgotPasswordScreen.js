@@ -4,6 +4,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
@@ -121,30 +123,31 @@ const ForgotPasswordScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }] }>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      
-      {/* Nền ảnh máy pha cà phê sang trọng */}
-      <ImageBackground
-        source={{ uri: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?q=80&w=800&auto=format&fit=crop' }}
-        style={styles.backgroundImage}
-      >
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]} />
-        <MagicalBackground />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: colors.background }] }>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+        
+        {/* Nền ảnh máy pha cà phê sang trọng */}
+        <ImageBackground
+          source={{ uri: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?q=80&w=800&auto=format&fit=crop' }}
+          style={styles.backgroundImage}
+        >
+          <View style={[styles.overlay, { backgroundColor: colors.overlay }]} />
+          <MagicalBackground />
 
-        <SafeAreaView style={{ flex: 1 }}>
-          <KeyboardAvoidingView
-            style={{ flex: 1 }}
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          >
-            {/* Header Nút Back */}
-            <View style={styles.header}>
-              <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-                <Ionicons name="chevron-back" size={32} color="#D4AF37" />
-              </TouchableOpacity>
-            </View>
+          <SafeAreaView style={{ flex: 1 }}>
+            <KeyboardAvoidingView
+              style={{ flex: 1 }}
+              behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            >
+              {/* Header Nút Back */}
+              <View style={styles.header}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                  <Ionicons name="chevron-back" size={32} color="#D4AF37" />
+                </TouchableOpacity>
+              </View>
 
-            <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
+              <Animated.View style={[styles.content, { opacity: fadeAnim }]}>
               
               {/* BƯỚC 1: NHẬP EMAIL */}
               {step === 1 && (
@@ -245,11 +248,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
                 </View>
               )}
 
-            </Animated.View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
-      </ImageBackground>
-    </View>
+              </Animated.View>
+            </KeyboardAvoidingView>
+          </SafeAreaView>
+        </ImageBackground>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 

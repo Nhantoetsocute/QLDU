@@ -4,6 +4,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   StyleSheet,
   ImageBackground,
   Dimensions,
@@ -110,88 +112,90 @@ const LoginScreen = ({ navigation }) => {
         Alert.alert("Từ chối!", data.error || "Sai tài khoản hoặc mật khẩu");
       }
     } catch (error) {
-       clearTimeout(timeoutId);
-       console.error(error);
-       if (error.name === 'AbortError') {
-         Alert.alert("Lỗi Mạng", "Yêu cầu quá hạn. Máy chủ không phản hồi!");
-       } else {
-         Alert.alert("Lỗi Mạng", "Không kết nối được máy chủ Backend!");
-       }
+      if (error?.name === 'AbortError' || error?.message === 'Aborted') {
+        Alert.alert("Lỗi Mạng", "Yêu cầu quá hạn. Máy chủ không phản hồi!");
+      } else {
+        console.error(error);
+        Alert.alert("Lỗi Mạng", "Không kết nối được máy chủ Backend!");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      <ImageBackground
-        source={require('../../assets/images/tra_cam_xa.jpg')}
-        style={styles.backgroundImage}
-      >
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]} />
-        <FallingBlossoms />
-        <View style={styles.contentContainer}>
-          <View style={styles.headerContainer}>
-            <Text style={styles.brandName}>True Juice</Text>
-            <Text style={styles.subtitle}>Thưởng thức sự tinh tế</Text>
-          </View>
-          <View style={styles.glassForm}>
-            <Text style={styles.formTitle}>Đăng Nhập</Text>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="person-outline" size={20} color="#D4AF37" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Tên đăng nhập hoặc Email"
-                placeholderTextColor="#A9A9A9"
-                value={username}
-                onChangeText={setUsername}
-                editable={!isLoading}
-              />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+        <ImageBackground
+          source={require('../../assets/images/tra_cam_xa.jpg')}
+          style={styles.backgroundImage}
+        >
+          <View style={[styles.overlay, { backgroundColor: colors.overlay }]} />
+          <FallingBlossoms />
+          <View style={styles.contentContainer}>
+            <View style={styles.headerContainer}>
+              <Text style={styles.brandName}>True Juice</Text>
+              <Text style={styles.subtitle}>Thưởng thức sự tinh tế</Text>
             </View>
-            <View style={styles.inputWrapper}>
-              <Ionicons name="lock-closed-outline" size={20} color="#D4AF37" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Mật khẩu"
-                placeholderTextColor="#A9A9A9"
-                secureTextEntry={!showPassword}
-                value={password}
-                onChangeText={setPassword}
-                editable={!isLoading}
-              />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={isLoading}>
-                <Ionicons
-                  name={showPassword ? 'eye-outline' : 'eye-off-outline'}
-                  size={20}
-                  color="#D4AF37"
+            <View style={styles.glassForm}>
+              <Text style={styles.formTitle}>Đăng Nhập</Text>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="person-outline" size={20} color="#D4AF37" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Tên đăng nhập hoặc Email"
+                  placeholderTextColor="#A9A9A9"
+                  value={username}
+                  onChangeText={setUsername}
+                  editable={!isLoading}
                 />
+              </View>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color="#D4AF37" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Mật khẩu"
+                  placeholderTextColor="#A9A9A9"
+                  secureTextEntry={!showPassword}
+                  value={password}
+                  onChangeText={setPassword}
+                  editable={!isLoading}
+                />
+                <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={isLoading}>
+                  <Ionicons
+                    name={showPassword ? 'eye-outline' : 'eye-off-outline'}
+                    size={20}
+                    color="#D4AF37"
+                  />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation?.navigate('ForgotPassword')} disabled={isLoading}>
+                <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.loginButton, isLoading && { opacity: 0.7 }]} 
+                onPress={handleLogin}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <Text style={styles.loginButtonText}>ĐANG XỬ LÝ...</Text>
+                ) : (
+                  <Text style={styles.loginButtonText}>BẮT ĐẦU HÀNH TRÌNH</Text>
+                )}
               </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation?.navigate('ForgotPassword')} disabled={isLoading}>
-              <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.loginButton, isLoading && { opacity: 0.7 }]} 
-              onPress={handleLogin}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <Text style={styles.loginButtonText}>ĐANG XỬ LÝ...</Text>
-              ) : (
-                <Text style={styles.loginButtonText}>BẮT ĐẦU HÀNH TRÌNH</Text>
-              )}
-            </TouchableOpacity>
+            <View style={styles.signupContainer}>
+              <Text style={styles.signupText}>Chưa có thẻ thành viên? </Text>
+              <TouchableOpacity onPress={() => navigation?.navigate('SignUp')} disabled={isLoading}>
+                <Text style={styles.signupLink}>Tạo ngay</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.signupContainer}>
-            <Text style={styles.signupText}>Chưa có thẻ thành viên? </Text>
-            <TouchableOpacity onPress={() => navigation?.navigate('SignUp')} disabled={isLoading}>
-              <Text style={styles.signupLink}>Tạo ngay</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </ImageBackground>
-    </View>
+        </ImageBackground>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 

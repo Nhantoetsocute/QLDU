@@ -4,6 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   StatusBar,
   ScrollView,
   Linking,
@@ -114,21 +116,23 @@ const HelpCenterScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}> 
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color={ui.accent} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: ui.text }]}>Trung tâm trợ giúp</Text>
-        <View style={{ width: 28 }} />
-      </View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={28} color={ui.accent} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: ui.text }]}>Trung tâm trợ giúp</Text>
+          <View style={{ width: 28 }} />
+        </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* CONTACT METHODS */}
         <Text style={[styles.sectionLabel, { color: ui.subText }]}>LIÊN HỆ HỖ TRỢ</Text>
         <View style={styles.contactGrid}>
@@ -219,8 +223,9 @@ const HelpCenterScreen = ({ navigation }) => {
             <Text style={styles.sendBtnText}>Gửi góp ý</Text>
           </TouchableOpacity>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

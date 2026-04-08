@@ -113,7 +113,7 @@ const premiumProducts = [
     id: 3,
     name: 'Trà Chanh',
     price: 35000,
-    image: require('../../assets/images/TC.avif'),
+    image: require('../../assets/images/tra_chanh.webp'),
     description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì, dễ uống mọi thời điểm.',
   },
   {

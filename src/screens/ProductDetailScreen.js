@@ -13,6 +13,9 @@ import {
   Alert,
   Modal,
   Platform,
+  TouchableWithoutFeedback,
+  Keyboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -23,6 +26,19 @@ const { width, height } = Dimensions.get('window');
 const ProductDetailScreen = ({ route, navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const { addToCart } = useCart();
+  const accent = colors.accent || '#D4AF37';
+  const ui = {
+    surface: colors.background,
+    card: isDarkMode ? 'rgba(255,255,255,0.04)' : '#F8FAFC',
+    border: isDarkMode ? 'rgba(212,175,55,0.2)' : 'rgba(0,0,0,0.08)',
+    text: colors.text,
+    subText: colors.subText,
+    dimText: isDarkMode ? '#CFCFCF' : '#4B5563',
+    overlayBtn: isDarkMode ? 'rgba(10,10,10,0.5)' : 'rgba(255,255,255,0.85)',
+    modalBg: isDarkMode ? '#111111' : '#FFFFFF',
+    modalOverlay: isDarkMode ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.2)',
+    inputBg: isDarkMode ? 'rgba(255,255,255,0.03)' : '#F3F4F6',
+  };
 
   // Lấy dữ liệu sản phẩm được truyền sang từ các trang trước
   // Nếu không có, dùng dữ liệu mẫu (phòng trường hợp lỗi)
@@ -50,6 +66,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [selectedDiscountVoucher, setSelectedDiscountVoucher] = useState(null);
   const [selectedShippingVoucher, setSelectedShippingVoucher] = useState(null);
   const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [deliveryAddressFocused, setDeliveryAddressFocused] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [hasPurchased, setHasPurchased] = useState(false);
   const [reviewText, setReviewText] = useState('');
@@ -100,7 +117,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
           key={star}
           name={star <= rating ? 'star' : 'star-outline'}
           size={size}
-          color="#D4AF37"
+          color={accent}
           style={{ marginRight: 3 }}
         />
       ))}
@@ -265,23 +282,24 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }] }>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: colors.background }] }>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
       {/* ẢNH SẢN PHẨM TRÀN VIỀN */}
       <View style={styles.imageContainer}>
         <Image source={imageSource} style={styles.productImage} />
         {/* Lớp gradient đen từ dưới lên để hòa trộn mượt mà với nền */}
-        <View style={styles.gradientOverlay} />
+        <View style={[styles.gradientOverlay, { backgroundColor: isDarkMode ? 'rgba(10,10,10,0.6)' : 'rgba(255,255,255,0.18)' }]} />
       </View>
 
       {/* HEADER NÚT BACK (Nổi trên ảnh) */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.iconButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="chevron-back" size={28} color="#D4AF37" />
+        <TouchableOpacity style={[styles.iconButton, { backgroundColor: ui.overlayBtn, borderColor: isDarkMode ? 'rgba(212, 175, 55, 0.3)' : 'rgba(0,0,0,0.12)' }]} onPress={() => navigation.goBack()}>
+          <Ionicons name="chevron-back" size={28} color={accent} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.iconButton}>
-          <Ionicons name="heart-outline" size={26} color="#D4AF37" />
+        <TouchableOpacity style={[styles.iconButton, { backgroundColor: ui.overlayBtn, borderColor: isDarkMode ? 'rgba(212, 175, 55, 0.3)' : 'rgba(0,0,0,0.12)' }]}>
+          <Ionicons name="heart-outline" size={26} color={accent} />
         </TouchableOpacity>
       </View>
 
@@ -289,86 +307,95 @@ const ProductDetailScreen = ({ route, navigation }) => {
       <ScrollView 
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <Animated.View 
-          style={[styles.detailsContainer, { opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}
+          style={[styles.detailsContainer, { backgroundColor: ui.surface, borderColor: ui.border, opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}
         >
           {/* Tên và Giá */}
           <View style={styles.titleRow}>
-            <Text style={styles.productName}>{item.name}</Text>
+            <Text style={[styles.productName, { color: ui.text }]}>{item.name}</Text>
           </View>
-          <Text style={styles.productPrice}>
+          <Text style={[styles.productPrice, { color: accent }]}>
             {typeof item.price === 'number' ? `${item.price.toLocaleString('vi-VN')} đ` : item.price}
           </Text>
 
           {/* Đường kẻ ngang trang trí */}
-          <View style={styles.divider} />
+          <View style={[styles.divider, { backgroundColor: ui.border }]} />
 
           {/* Mô tả */}
-          <Text style={styles.sectionTitle}>Mô tả hương vị</Text>
-          <Text style={styles.descriptionText}>
-            {item.description || 'Hương vị tuyệt hảo được pha chế từ những nguyên liệu thượng hạng nhất, mang đến cho bạn trải nghiệm xa xỉ đích thực.'}
-          </Text>
+          <Text style={[styles.sectionTitle, { color: accent }]}>Mô tả hương vị</Text>
+          <ScrollView
+            style={styles.descriptionScroll}
+            showsVerticalScrollIndicator
+            nestedScrollEnabled
+            keyboardShouldPersistTaps="handled"
+          >
+            <Text style={[styles.descriptionText, { color: ui.subText }]}> 
+              {item.description || 'Hương vị tuyệt hảo được pha chế từ những nguyên liệu thượng hạng nhất, mang đến cho bạn trải nghiệm xa xỉ đích thực.'}
+            </Text>
+          </ScrollView>
 
           {/* Chỉnh số lượng */}
-          <View style={styles.quantitySection}>
-            <Text style={styles.quantityLabel}>Số lượng:</Text>
+          <View style={[styles.quantitySection, { backgroundColor: ui.card, borderColor: ui.border }]}>
+            <Text style={[styles.quantityLabel, { color: ui.text }]}>Số lượng:</Text>
             <View style={styles.quantityControl}>
-              <TouchableOpacity style={styles.qtyBtn} onPress={decreaseQuantity}>
-                <Feather name="minus" size={20} color="#D4AF37" />
+              <TouchableOpacity style={[styles.qtyBtn, { backgroundColor: isDarkMode ? 'rgba(212, 175, 55, 0.1)' : 'rgba(212,175,55,0.12)', borderColor: isDarkMode ? 'rgba(212, 175, 55, 0.5)' : 'rgba(0,0,0,0.15)' }]} onPress={decreaseQuantity}>
+                <Feather name="minus" size={20} color={accent} />
               </TouchableOpacity>
-              <Text style={styles.qtyText}>{quantity}</Text>
-              <TouchableOpacity style={styles.qtyBtn} onPress={increaseQuantity}>
-                <Feather name="plus" size={20} color="#D4AF37" />
+              <Text style={[styles.qtyText, { color: ui.text }]}>{quantity}</Text>
+              <TouchableOpacity style={[styles.qtyBtn, { backgroundColor: isDarkMode ? 'rgba(212, 175, 55, 0.1)' : 'rgba(212,175,55,0.12)', borderColor: isDarkMode ? 'rgba(212, 175, 55, 0.5)' : 'rgba(0,0,0,0.15)' }]} onPress={increaseQuantity}>
+                <Feather name="plus" size={20} color={accent} />
               </TouchableOpacity>
             </View>
           </View>
 
           <View style={styles.reviewSection}>
-            <Text style={styles.sectionTitle}>Đánh giá từ khách hàng</Text>
+            <Text style={[styles.sectionTitle, { color: accent }]}>Đánh giá từ khách hàng</Text>
             {reviews.map((review) => (
-              <View key={review.id} style={styles.reviewCard}>
+              <View key={review.id} style={[styles.reviewCard, { borderColor: ui.border, backgroundColor: ui.card }]}>
                 <View style={styles.reviewTopRow}>
                   <View style={styles.reviewUserRow}>
-                    <Image source={{ uri: review.avatar }} style={styles.reviewAvatar} />
-                    <Text style={styles.reviewName}>{review.name}</Text>
+                    <Image source={{ uri: review.avatar }} style={[styles.reviewAvatar, { borderColor: isDarkMode ? 'rgba(212,175,55,0.4)' : 'rgba(0,0,0,0.12)' }]} />
+                    <Text style={[styles.reviewName, { color: ui.text }]}>{review.name}</Text>
                   </View>
                   {renderStars(review.rating)}
                 </View>
-                <Text style={styles.reviewComment}>{review.comment}</Text>
+                <Text style={[styles.reviewComment, { color: ui.dimText }]}>{review.comment}</Text>
               </View>
             ))}
 
             {hasPurchased ? (
-              <View style={styles.writeReviewBox}>
-                <Text style={styles.writeTitle}>Viết đánh giá của bạn</Text>
+              <View style={[styles.writeReviewBox, { borderColor: ui.border, backgroundColor: ui.card }]}>
+                <Text style={[styles.writeTitle, { color: ui.text }]}>Viết đánh giá của bạn</Text>
                 <View style={styles.ratingPickRow}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <TouchableOpacity key={star} onPress={() => setMyRating(star)}>
                       <Ionicons
                         name={star <= myRating ? 'star' : 'star-outline'}
                         size={22}
-                        color="#D4AF37"
+                        color={accent}
                         style={{ marginRight: 6 }}
                       />
                     </TouchableOpacity>
                   ))}
                 </View>
                 <TextInput
-                  style={styles.reviewInput}
+                  style={[styles.reviewInput, { color: ui.text, borderColor: ui.border, backgroundColor: ui.inputBg }]}
                   value={reviewText}
                   onChangeText={setReviewText}
                   placeholder="Nhập đánh giá của bạn..."
-                  placeholderTextColor="#888"
+                  placeholderTextColor={ui.subText}
                   multiline
                 />
-                <TouchableOpacity style={styles.sendReviewBtn} onPress={handleSubmitReview}>
+                <TouchableOpacity style={[styles.sendReviewBtn, { backgroundColor: accent }]} onPress={handleSubmitReview}>
                   <Text style={styles.sendReviewText}>Gửi đánh giá</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={styles.lockedReviewBox}>
-                <Text style={styles.lockedReviewText}>Bạn cần mua hàng trước khi được viết đánh giá.</Text>
+              <View style={[styles.lockedReviewBox, { backgroundColor: ui.card }]}>
+                <Text style={[styles.lockedReviewText, { color: ui.subText }]}>Bạn cần mua hàng trước khi được viết đánh giá.</Text>
               </View>
             )}
           </View>
@@ -376,12 +403,12 @@ const ProductDetailScreen = ({ route, navigation }) => {
       </ScrollView>
 
       {/* BOTTOM ACTION BAR (Cố định ở dưới cùng) */}
-      <Animated.View style={[styles.bottomBar, { opacity: fadeAnim }]}>
-        <TouchableOpacity style={styles.addToCartBtn} onPress={handleAddToCart}>
-          <Text style={styles.addToCartText}>THÊM VÀO GIỎ</Text>
+      <Animated.View style={[styles.bottomBar, { backgroundColor: isDarkMode ? 'rgba(10, 10, 10, 0.95)' : '#FFFFFF', borderTopColor: ui.border, opacity: fadeAnim }]}> 
+        <TouchableOpacity style={[styles.addToCartBtn, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212, 175, 55, 0.05)' : 'rgba(212,175,55,0.12)' }]} onPress={handleAddToCart}>
+          <Text style={[styles.addToCartText, { color: accent }]}>THÊM VÀO GIỎ</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={styles.buyNowBtn} onPress={handleBuyNow}>
+        <TouchableOpacity style={[styles.buyNowBtn, { backgroundColor: accent }]} onPress={handleBuyNow}>
           <Text style={styles.buyNowText}>MUA NGAY</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -392,67 +419,89 @@ const ProductDetailScreen = ({ route, navigation }) => {
         animationType="slide"
         onRequestClose={() => setVoucherModalVisible(false)}
       >
-        <View style={styles.voucherModalOverlay}>
-          <View style={styles.voucherModalCard}>
-            <Text style={styles.voucherModalTitle}>Chọn ưu đãi áp dụng</Text>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+            <View style={[styles.voucherModalOverlay, { backgroundColor: ui.modalOverlay }]}> 
+              <View style={[styles.voucherModalCard, { backgroundColor: ui.modalBg, borderColor: ui.border }]}> 
+                <ScrollView
+                  showsVerticalScrollIndicator={false}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  contentContainerStyle={styles.voucherScrollContent}
+                >
+            <Text style={[styles.voucherModalTitle, { color: ui.text }]}>Chọn ưu đãi áp dụng</Text>
 
-            <Text style={styles.voucherGroupTitle}>Voucher giảm giá</Text>
+            <Text style={[styles.voucherGroupTitle, { color: accent }]}>Voucher giảm giá</Text>
             {ownedDiscountVouchers.map((v) => {
               const selected = selectedDiscountVoucher === v.id;
               return (
                 <TouchableOpacity
                   key={v.id}
-                  style={[styles.voucherOption, selected && styles.voucherOptionSelected]}
+                  style={[styles.voucherOption, { borderColor: ui.border, backgroundColor: ui.card }, selected && [styles.voucherOptionSelected, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212,175,55,0.1)' : 'rgba(212,175,55,0.2)' }]]}
                   onPress={() => setSelectedDiscountVoucher(selected ? null : v.id)}
                 >
-                  <Text style={styles.voucherOptionText}>{v.title}</Text>
-                  <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={20} color="#D4AF37" />
+                  <Text style={[styles.voucherOptionText, { color: ui.text }]}>{v.title}</Text>
+                  <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={accent} />
                 </TouchableOpacity>
               );
             })}
 
-            <Text style={styles.voucherGroupTitle}>Voucher freeship</Text>
+            <Text style={[styles.voucherGroupTitle, { color: accent }]}>Voucher freeship</Text>
             {ownedShippingVouchers.map((v) => {
               const selected = selectedShippingVoucher === v.id;
               return (
                 <TouchableOpacity
                   key={v.id}
-                  style={[styles.voucherOption, selected && styles.voucherOptionSelected]}
+                  style={[styles.voucherOption, { borderColor: ui.border, backgroundColor: ui.card }, selected && [styles.voucherOptionSelected, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212,175,55,0.1)' : 'rgba(212,175,55,0.2)' }]]}
                   onPress={() => setSelectedShippingVoucher(selected ? null : v.id)}
                 >
-                  <Text style={styles.voucherOptionText}>{v.title}</Text>
-                  <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={20} color="#D4AF37" />
+                  <Text style={[styles.voucherOptionText, { color: ui.text }]}>{v.title}</Text>
+                  <Ionicons name={selected ? 'checkmark-circle' : 'ellipse-outline'} size={20} color={accent} />
                 </TouchableOpacity>
               );
             })}
 
             {checkoutMode === 'buy' ? (
               <>
-                <Text style={styles.voucherGroupTitle}>Địa chỉ nhận hàng</Text>
+                <Text style={[styles.voucherGroupTitle, { color: accent }]}>Địa chỉ nhận hàng</Text>
+                <Text style={[styles.addressHint, { color: ui.subText }]}>Nhập đầy đủ số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố</Text>
                 <TextInput
                   value={deliveryAddress}
                   onChangeText={setDeliveryAddress}
-                  placeholder="Nhập địa chỉ nhận hàng"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.addressInput}
+                  onFocus={() => setDeliveryAddressFocused(true)}
+                  onBlur={() => setDeliveryAddressFocused(false)}
+                  placeholder="Ví dụ: 12 Thái Hà, Trung Liệt, Đống Đa, Hà Nội"
+                  placeholderTextColor={ui.subText}
+                  style={[
+                    styles.addressInput,
+                    {
+                      color: ui.text,
+                      borderColor: deliveryAddressFocused ? accent : ui.border,
+                      backgroundColor: deliveryAddressFocused ? (isDarkMode ? 'rgba(212,175,55,0.08)' : 'rgba(212,175,55,0.08)') : ui.inputBg,
+                    },
+                  ]}
                   multiline
                 />
 
-                <Text style={styles.voucherGroupTitle}>Hình thức thanh toán</Text>
+                <Text style={[styles.voucherGroupTitle, { color: accent }]}>Hình thức thanh toán</Text>
                 <View style={styles.paymentMethodRow}>
                   <TouchableOpacity
-                    style={[styles.paymentMethodBtn, paymentMethod === 'cod' && styles.paymentMethodBtnActive]}
+                    style={[styles.paymentMethodBtn, { borderColor: ui.border, backgroundColor: ui.card }, paymentMethod === 'cod' && [styles.paymentMethodBtnActive, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.2)' }]]}
                     onPress={() => setPaymentMethod('cod')}
                   >
-                    <Text style={[styles.paymentMethodText, paymentMethod === 'cod' && styles.paymentMethodTextActive]}>
+                    <Text style={[styles.paymentMethodText, { color: ui.subText }, paymentMethod === 'cod' && [styles.paymentMethodTextActive, { color: accent }]]}>
                       Thanh toán khi nhận hàng
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.paymentMethodBtn, paymentMethod === 'vnpay' && styles.paymentMethodBtnActive]}
+                    style={[styles.paymentMethodBtn, { borderColor: ui.border, backgroundColor: ui.card }, paymentMethod === 'vnpay' && [styles.paymentMethodBtnActive, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.2)' }]]}
                     onPress={() => setPaymentMethod('vnpay')}
                   >
-                    <Text style={[styles.paymentMethodText, paymentMethod === 'vnpay' && styles.paymentMethodTextActive]}>
+                    <Text style={[styles.paymentMethodText, { color: ui.subText }, paymentMethod === 'vnpay' && [styles.paymentMethodTextActive, { color: accent }]]}>
                       VNPAY
                     </Text>
                   </TouchableOpacity>
@@ -461,18 +510,22 @@ const ProductDetailScreen = ({ route, navigation }) => {
             ) : null}
 
             <View style={styles.voucherActionRow}>
-              <TouchableOpacity style={styles.voucherCancelBtn} onPress={() => setVoucherModalVisible(false)}>
-                <Text style={styles.voucherCancelText}>Đóng</Text>
+              <TouchableOpacity style={[styles.voucherCancelBtn, { borderColor: ui.border, backgroundColor: ui.card }]} onPress={() => setVoucherModalVisible(false)}>
+                <Text style={[styles.voucherCancelText, { color: ui.text }]}>Đóng</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.voucherApplyBtn} onPress={handleConfirmCheckout}>
+              <TouchableOpacity style={[styles.voucherApplyBtn, { backgroundColor: accent }]} onPress={handleConfirmCheckout}>
                 <Text style={styles.voucherApplyText}>Áp dụng & xác nhận</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+                </ScrollView>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
-    </View>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -579,7 +632,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: '#A9A9A9',
     lineHeight: 24,
+  },
+  descriptionScroll: {
+    maxHeight: 160,
     marginBottom: 35,
+    paddingRight: 4,
   },
   quantitySection: {
     flexDirection: 'row',
@@ -770,6 +827,10 @@ const styles = StyleSheet.create({
     padding: 16,
     borderTopWidth: 1,
     borderColor: 'rgba(212,175,55,0.3)',
+    maxHeight: '80%',
+  },
+  voucherScrollContent: {
+    paddingBottom: 8,
   },
   voucherModalTitle: {
     color: '#FFF',
@@ -802,6 +863,11 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 10,
     fontSize: 13,
+  },
+  addressHint: {
+    fontSize: 12,
+    marginBottom: 8,
+    lineHeight: 18,
   },
   addressInput: {
     borderWidth: 1,

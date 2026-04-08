@@ -5,6 +5,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
   ScrollView,
   StatusBar,
   Alert,
@@ -39,6 +41,7 @@ const CheckoutScreen = ({ navigation }) => {
   const [voucherCode, setVoucherCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [addressFocused, setAddressFocused] = useState(false);
 
   const ui = {
     bg: colors.background,
@@ -171,8 +174,9 @@ const CheckoutScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}> 
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -183,14 +187,17 @@ const CheckoutScreen = ({ navigation }) => {
         <View style={{ width: 28 }} />
       </View>
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
         >
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
+          >
           {/* ORDER SUMMARY */}
           <Text style={[styles.sectionLabel, { color: ui.subText }]}>ĐƠN HÀNG ({cartItems.length} MÓN)</Text>
           <View style={[styles.card, { backgroundColor: ui.card, borderColor: ui.cardBorder }]}>
@@ -241,13 +248,23 @@ const CheckoutScreen = ({ navigation }) => {
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={[styles.inputLabel, { color: ui.text }]}>Địa chỉ giao hàng</Text>
+              <Text style={[styles.inputLabel, { color: addressFocused ? ui.accent : ui.text }]}>Địa chỉ giao hàng</Text>
+              <Text style={[styles.inputHint, { color: ui.subText }]}>Nhập đầy đủ số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố</Text>
               <TextInput
-                style={[styles.input, { backgroundColor: ui.inputBg, color: ui.text }]}
-                placeholder="Nhập địa chỉ đầy đủ"
+                style={[
+                  styles.input,
+                  {
+                    backgroundColor: addressFocused ? (isDarkMode ? 'rgba(212,175,55,0.08)' : 'rgba(212,175,55,0.08)') : ui.inputBg,
+                    color: ui.text,
+                    borderColor: addressFocused ? ui.accent : 'transparent',
+                  },
+                ]}
+                placeholder="Ví dụ: 12 Thái Hà, Trung Liệt, Đống Đa, Hà Nội"
                 placeholderTextColor={ui.subText}
                 value={deliveryAddress}
                 onChangeText={setDeliveryAddress}
+                onFocus={() => setAddressFocused(true)}
+                onBlur={() => setAddressFocused(false)}
               />
             </View>
             <View style={[styles.inputGroup, { marginBottom: 0 }]}>
@@ -345,10 +362,10 @@ const CheckoutScreen = ({ navigation }) => {
               </Text>
             )}
           </View>
-        </ScrollView>
+          </ScrollView>
 
-        {/* BOTTOM BAR */}
-        <View style={[styles.bottomBar, { backgroundColor: isDarkMode ? '#111' : '#FFF', borderTopColor: ui.cardBorder }]}>
+          {/* BOTTOM BAR */}
+          <View style={[styles.bottomBar, { backgroundColor: isDarkMode ? '#111' : '#FFF', borderTopColor: ui.cardBorder }]}> 
           <View>
             <Text style={[styles.bottomTotal, { color: ui.text }]}>Tổng: {formatPrice(total)}</Text>
             <Text style={[styles.bottomItems, { color: ui.subText }]}>{cartItems.length} sản phẩm</Text>
@@ -363,9 +380,10 @@ const CheckoutScreen = ({ navigation }) => {
               {isLoading ? 'ĐANG XỬ LÝ...' : 'ĐẶT HÀNG'}
             </Text>
           </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </View>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -418,7 +436,9 @@ const styles = StyleSheet.create({
   // Input
   inputGroup: { marginBottom: 16 },
   inputLabel: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
+  inputHint: { fontSize: 12, lineHeight: 18, marginBottom: 8 },
   input: {
+    borderWidth: 1,
     borderRadius: 12,
     height: 48,
     paddingHorizontal: 14,

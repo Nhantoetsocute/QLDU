@@ -13,6 +13,8 @@ import {
   StatusBar,
   Platform,
   Alert,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -369,8 +371,9 @@ const StoreScreen = ({ navigation, route }) => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: ui.containerBg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={ui.headerBg} />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={[styles.container, { backgroundColor: ui.containerBg }]}> 
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={ui.headerBg} />
       
       {/* HEADER */}
       <View style={[styles.header, { backgroundColor: ui.headerBg, borderBottomColor: ui.headerBorder }]}>
@@ -380,63 +383,63 @@ const StoreScreen = ({ navigation, route }) => {
         </TouchableOpacity>
       </View>
 
-      {isSearchVisible ? (
-        <View style={[styles.searchWrap, { backgroundColor: ui.headerBg, borderBottomColor: ui.headerBorder }]}>
-          <View style={[styles.searchInputBox, { backgroundColor: ui.searchBg, borderColor: ui.searchBorder }]}>
-            <Feather name="search" size={18} color={ui.searchPlaceholder} />
-            <TextInput
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Tìm theo tên hoặc địa chỉ cửa hàng"
-              placeholderTextColor={ui.searchPlaceholder}
-              style={[styles.searchInput, { color: ui.searchText }]}
-              autoFocus
-              returnKeyType="search"
-            />
+        {isSearchVisible ? (
+          <View style={[styles.searchWrap, { backgroundColor: ui.headerBg, borderBottomColor: ui.headerBorder }]}> 
+            <View style={[styles.searchInputBox, { backgroundColor: ui.searchBg, borderColor: ui.searchBorder }]}> 
+              <Feather name="search" size={18} color={ui.searchPlaceholder} />
+              <TextInput
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Tìm theo tên hoặc địa chỉ cửa hàng"
+                placeholderTextColor={ui.searchPlaceholder}
+                style={[styles.searchInput, { color: ui.searchText }]}
+                autoFocus
+                returnKeyType="search"
+              />
+            </View>
           </View>
-        </View>
-      ) : null}
+        ) : null}
 
       {/* BẢN ĐỒ HIỂN THỊ TẤT CẢ CỬA HÀNG */}
-      <View style={styles.mapWrapper}>
-        <MapView
-          style={{ flex: 1 }}
-          initialRegion={{
-            latitude: 21.028333,
-            longitude: 105.834445,
-            latitudeDelta: 0.1,
-            longitudeDelta: 0.1,
-          }}
-        >
-          {filteredStores.map((store) => (
-            <Marker
-              key={store.id}
-              coordinate={{
-                latitude: store.lat,
-                longitude: store.lng,
-              }}
-              title={store.name}
-              description={store.address}
-              onPress={() => openStoreDetail(store)}
-            />
-          ))}
-        </MapView>
-      </View>
+        <View style={styles.mapWrapper}>
+          <MapView
+            style={{ flex: 1 }}
+            initialRegion={{
+              latitude: 21.028333,
+              longitude: 105.834445,
+              latitudeDelta: 0.1,
+              longitudeDelta: 0.1,
+            }}
+          >
+            {filteredStores.map((store) => (
+              <Marker
+                key={store.id}
+                coordinate={{
+                  latitude: store.lat,
+                  longitude: store.lng,
+                }}
+                title={store.name}
+                description={store.address}
+                onPress={() => openStoreDetail(store)}
+              />
+            ))}
+          </MapView>
+        </View>
 
       {/* DANH SÁCH CỬA HÀNG */}
-      <View style={styles.listWrapper}>
-        <Text style={[styles.listTitle, { color: ui.headerText }]}>Cửa hàng gần bạn</Text>
-        <FlatList
-          data={filteredStores}
-          keyExtractor={(item) => item.id}
-          renderItem={renderStoreCard}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={true}
-          scrollEnabled={true}
-          nestedScrollEnabled={true}
-          ListEmptyComponent={<Text style={[styles.emptySearchText, { color: ui.cardSubText }]}>Không tìm thấy cửa hàng phù hợp.</Text>}
-        />
-      </View>
+        <View style={styles.listWrapper}>
+          <Text style={[styles.listTitle, { color: ui.headerText }]}>Cửa hàng gần bạn</Text>
+          <FlatList
+            data={filteredStores}
+            keyExtractor={(item) => item.id}
+            renderItem={renderStoreCard}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={true}
+            scrollEnabled={true}
+            nestedScrollEnabled={true}
+            ListEmptyComponent={<Text style={[styles.emptySearchText, { color: ui.cardSubText }]}>Không tìm thấy cửa hàng phù hợp.</Text>}
+          />
+        </View>
 
       {/* MODAL CHI TIẾT */}
       <Modal
@@ -617,7 +620,8 @@ const StoreScreen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

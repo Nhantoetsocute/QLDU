@@ -4,6 +4,8 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   StyleSheet,
   ImageBackground,
   Dimensions,
@@ -131,38 +133,40 @@ const SignUpScreen = ({ navigation }) => {
         Alert.alert("Đăng ký thất bại", data.error || "Gặp sự cố khi kết nối!");
       }
     } catch (error) {
-      clearTimeout(timeoutId);
-      console.error(error);
-      if (error.name === 'AbortError') {
+      if (error?.name === 'AbortError' || error?.message === 'Aborted') {
         Alert.alert("Lỗi mạng", "Yêu cầu quá hạn. Máy chủ không phản hồi!");
       } else {
+        console.error(error);
         Alert.alert("Lỗi mạng", "Cổng kết nối bị đóng. Hãy kiểm tra địa chỉ IPv4.");
       }
     } finally {
-        setIsLoading(false);
+      clearTimeout(timeoutId);
+      setIsLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      <ImageBackground
-        source={require('../../assets/images/tra_chanh.webp')}
-        style={styles.backgroundImage}
-      >
-        <View style={[styles.overlay, { backgroundColor: colors.overlay }]} />
-        <FloatingGoldDust />
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
+        <ImageBackground
+          source={require('../../assets/images/tra_chanh.webp')}
+          style={styles.backgroundImage}
         >
-          <ScrollView 
-            contentContainerStyle={styles.scrollContent}
-            showsVerticalScrollIndicator={false}
+          <View style={[styles.overlay, { backgroundColor: colors.overlay }]} />
+          <FloatingGoldDust />
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           >
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack()} disabled={isLoading}>
-              <Ionicons name="chevron-back" size={32} color="#D4AF37" />
-            </TouchableOpacity>
+            <ScrollView 
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <TouchableOpacity style={styles.backButton} onPress={() => navigation?.goBack()} disabled={isLoading}>
+                <Ionicons name="chevron-back" size={32} color="#D4AF37" />
+              </TouchableOpacity>
 
             <View style={styles.headerContainer}>
               <Text style={styles.title}>TRỞ THÀNH{'\n'}THÀNH VIÊN</Text>
@@ -248,10 +252,11 @@ const SignUpScreen = ({ navigation }) => {
                 <Text style={styles.loginLink}>Đăng nhập</Text>
               </TouchableOpacity>
             </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </ImageBackground>
-    </View>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </ImageBackground>
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 

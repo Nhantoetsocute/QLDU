@@ -6,6 +6,8 @@ import {
   SafeAreaView,
   TextInput,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Keyboard,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -110,23 +112,24 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={ui.bg} />
-      
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={26} color={ui.accent} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: ui.text }]}>Cập nhật thông tin</Text>
-        <View style={{ width: 26 }} />
-      </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}> 
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={ui.bg} />
+        
+        {/* HEADER */}
+        <View style={styles.header}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={26} color={ui.accent} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: ui.text }]}>Cập nhật thông tin</Text>
+          <View style={{ width: 26 }} />
+        </View>
 
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
           
           {/* KHU VỰC AVATAR */}
           <View style={styles.avatarContainer}>
@@ -201,9 +204,10 @@ const ProfileScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </TouchableWithoutFeedback>
   );
 };
 

@@ -11,12 +11,15 @@ import {
   StatusBar,
   TextInput,
   ImageBackground,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
-import { Alert, Platform } from 'react-native';
 
 const { width } = Dimensions.get('window');
 
@@ -35,7 +38,7 @@ const allDrinks = [
   // --- Sản phẩm đồng bộ với HomeScreen ---
   { id: '1', name: 'Nước ép rau má', price: 120000, tag: 'New', image: require('../../assets/images/rauma.jpg'), category: 'juice', description: 'Rau má tươi xay lạnh cùng chút đường phèn thanh nhẹ, giúp giải nhiệt và làm dịu cơ thể trong ngày nắng.' },
   { id: '2', name: 'Trà đào cam sả', price: 55000, tag: 'Signature', image: require('../../assets/images/tra_cam_xa.jpg'), category: 'tea', description: 'Sự kết hợp của trà đen ủ đậm, đào ngọt dịu, cam mọng nước và hương sả thơm mát, cân bằng chua ngọt.' },
-  { id: '3', name: 'Trà Chanh', price: 35000, tag: 'Popular', image: require('../../assets/images/TC.avif'), category: 'tea', description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì.' },
+  { id: '3', name: 'Trà Chanh', price: 35000, tag: 'Popular', image: require('../../assets/images/tra_chanh.webp'), category: 'tea', description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì.' },
   { id: '4', name: 'Trà Xanh', price: 40000, tag: 'Classic', image: require('../../assets/images/tra_xanh.jpg'), category: 'tea', description: 'Trà xanh nguyên lá với hậu vị dịu và hương thơm tự nhiên, phù hợp cho người thích vị trà thuần khiết.' },
   { id: '5', name: 'Cà phê sữa đá', price: 29000, tag: 'Best Seller', image: require('../../assets/images/CPSD.webp'), category: 'coffee', description: 'Cà phê pha phin truyền thống thơm lừng kết hợp cùng sữa đặc béo ngậy.' },
   // --- Sản phẩm mở rộng ---
@@ -62,18 +65,78 @@ const AllProductsScreen = ({ navigation }) => {
   const [selectedCat, setSelectedCat] = useState('all');
   const [searchText, setSearchText] = useState('');
   const [showSearch, setShowSearch] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const toastAnim = useRef(new Animated.Value(0)).current;
+  const toastTimerRef = useRef(null);
 
   useEffect(() => {
     Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }).start();
   }, [selectedCat]);
 
+  useEffect(() => () => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+  }, []);
+
   const filteredDrinks = allDrinks
     .filter((d) => selectedCat === 'all' || d.category === selectedCat)
     .filter((d) => d.name.toLowerCase().includes(searchText.trim().toLowerCase()));
 
-  const renderDrinkCard = ({ item }) => (
+  const addItemToCart = (item) => {
+    const numericPrice = typeof item.price === 'number' ? item.price :
+      Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
 
+    addToCart({
+      id: item.id,
+      name: item.name,
+      price: numericPrice,
+      image: item.image,
+      quantity: 1
+    });
+
+    const msg = `Đã thêm ${item.name} vào giỏ hàng`;
+    setToastMessage(msg);
+    Animated.timing(toastAnim, {
+      toValue: 1,
+      duration: 160,
+      useNativeDriver: true,
+    }).start();
+
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+    }
+    toastTimerRef.current = setTimeout(() => {
+      Animated.timing(toastAnim, {
+        toValue: 0,
+        duration: 160,
+        useNativeDriver: true,
+      }).start(() => setToastMessage(''));
+    }, 1700);
+  };
+
+  const handleConfirmAddToCart = (item) => {
+    const confirmMessage = `Bạn có muốn thêm ${item.name} vào giỏ hàng không?`;
+
+    if (Platform.OS === 'web') {
+      const ok = window.confirm(confirmMessage);
+      if (ok) addItemToCart(item);
+      return;
+    }
+
+    Alert.alert(
+      'Thêm vào giỏ hàng',
+      confirmMessage,
+      [
+        { text: 'Không', style: 'cancel' },
+        { text: 'Đồng ý', onPress: () => addItemToCart(item) },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const renderDrinkCard = ({ item }) => (
     <TouchableOpacity
       style={[styles.card, { backgroundColor: ui.cardBg, borderColor: ui.cardBorder }]}
       activeOpacity={0.9}
@@ -94,20 +157,7 @@ const AllProductsScreen = ({ navigation }) => {
           </Text>
           <TouchableOpacity
             style={styles.addButton}
-            onPress={() => {
-              const numericPrice = typeof item.price === 'number' ? item.price :
-                Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
-              addToCart({
-                id: item.id,
-                name: item.name,
-                price: numericPrice,
-                image: item.image,
-                quantity: 1
-              });
-              const msg = `Đã thêm ${item.name} vào giỏ hàng`;
-              if (Platform.OS === 'web') window.alert(msg);
-              else Alert.alert('Thành công', msg);
-            }}
+            onPress={() => handleConfirmAddToCart(item)}
           >
             <Ionicons name="add" size={20} color="#1A1A1A" />
           </TouchableOpacity>
@@ -117,8 +167,9 @@ const AllProductsScreen = ({ navigation }) => {
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
+        <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent />
 
       <ImageBackground
         source={{ uri: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=800' }}
@@ -201,7 +252,31 @@ const AllProductsScreen = ({ navigation }) => {
           }
         />
       </ImageBackground>
-    </View>
+
+      {toastMessage ? (
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.toast,
+            {
+              opacity: toastAnim,
+              transform: [
+                {
+                  translateY: toastAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
+          <Ionicons name="checkmark-circle" size={18} color="#FFFFFF" />
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </Animated.View>
+      ) : null}
+      </View>
+    </TouchableWithoutFeedback>
   );
 };
 
@@ -268,6 +343,32 @@ const styles = StyleSheet.create({
   drinkPrice: { color: '#D4AF37', fontWeight: 'bold', fontSize: 15 },
   addButton: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#D4AF37', justifyContent: 'center', alignItems: 'center' },
   emptyText: { color: '#AAA', textAlign: 'center', marginTop: 30, fontSize: 14 },
+  toast: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: 'rgba(20,20,20,0.96)',
+    borderWidth: 1,
+    borderColor: 'rgba(212,175,55,0.35)',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOpacity: 0.22,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
+  toastText: {
+    flex: 1,
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '600',
+  },
 });
 
 export default AllProductsScreen;
