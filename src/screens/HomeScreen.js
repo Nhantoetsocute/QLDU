@@ -96,32 +96,63 @@ const categories = [
 
 const premiumProducts = [
   {
-    id: '1',
+    id: 1,
     name: 'Nước ép rau má',
-    price: '120.000 đ',
+    price: 120000,
     image: require('../../assets/images/rauma.jpg'),
     description: 'Rau má tươi xay lạnh cùng chút đường phèn thanh nhẹ, giúp giải nhiệt và làm dịu cơ thể trong ngày nắng.',
   },
   {
-    id: '2',
-    name: 'Trà đào cam xả',
-    price: '95.000 đ',
+    id: 2,
+    name: 'Trà đào cam sả',
+    price: 55000,
     image: require('../../assets/images/tra_cam_xa.jpg'),
     description: 'Sự kết hợp của trà đen ủ đậm, đào ngọt dịu, cam mọng nước và hương sả thơm mát, cân bằng chua ngọt.',
   },
   {
-    id: '3',
+    id: 3,
     name: 'Trà Chanh',
-    price: '85.000 đ',
+    price: 35000,
     image: require('../../assets/images/tra_chanh.webp'),
     description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì, dễ uống mọi thời điểm.',
   },
   {
-    id: '4',
+    id: 4,
     name: 'Trà Xanh',
-    price: '75.000 đ',
+    price: 40000,
     image: require('../../assets/images/tra_xanh.jpg'),
     description: 'Trà xanh nguyên lá với hậu vị dịu và hương thơm tự nhiên, phù hợp cho người thích vị trà thuần khiết.',
+  },
+  {
+    id: 5,
+    name: 'Cà phê sữa đá',
+    price: 29000,
+    image: require('../../assets/images/cold_brew.jpg'),
+    description: 'Cà phê pha phin truyền thống thơm lừng kết hợp cùng sữa đặc béo ngậy.',
+  },
+];
+
+const heroBanners = [
+  {
+    id: 2,
+    badge: 'SIGNATURE',
+    title: 'Trà đào cam sả',
+    subtitle: 'Sự kết hợp hoàn hảo giữa trà đen và trái cây tươi.',
+    image: require('../../assets/images/tra_cam_xa.jpg'),
+  },
+  {
+    id: 5,
+    badge: 'BEST SELLER',
+    title: 'Cà phê sữa đá',
+    subtitle: 'Hương vị tuổi trẻ, đậm đà nhưng ngọt bùi.',
+    image: require('../../assets/images/cold_brew.jpg'),
+  },
+  {
+    id: 1,
+    badge: 'NEW',
+    title: 'Nước ép rau má',
+    subtitle: 'Thanh mát cơ thể ngày hè nóng nực.',
+    image: require('../../assets/images/rauma.jpg'),
   },
 ];
 
@@ -249,30 +280,48 @@ const HomeScreen = ({ navigation }) => {
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           
-          {/* HERO SECTION: SẢN PHẨM SIGNATURE */}
+          {/* HERO SECTION: BANNER TRƯỢT */}
           <View style={styles.heroSection}>
-            <ImageBackground 
-              source={require('../../assets/images/slide.jpg')} 
-              style={styles.heroImageCard}
-              imageStyle={{ borderRadius: 24 }}
-            >
-              <View style={[styles.heroOverlay, { backgroundColor: ui.heroMask }] }>
-                <View style={styles.badgePremium}>
-                  <Text style={styles.badgePremiumText}>SIGNATURE</Text>
-                </View>
-                <View style={styles.heroTextContainer}>
-                  <Text style={[styles.heroTitle, { color: '#FFFFFF' }]}>Trà đào cam xả</Text>
-                  <Text style={[styles.heroSubtitle, { color: '#F1F5F9' }]}>Sự hòa quyện của nghệ thuật và hương vị.</Text>
-                  <TouchableOpacity 
-                    style={styles.heroButton}
-                    onPress={() => navigation.navigate('ProductDetail', { item: premiumProducts.find(p => p.id === '2') })}
+            <FlatList
+              data={heroBanners}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id.toString()}
+              snapToInterval={width - 20}
+              decelerationRate="fast"
+              contentContainerStyle={{ paddingLeft: 20, paddingRight: 0 }}
+              renderItem={({ item }) => (
+                <View style={{ width: width - 40, marginRight: 20 }}>
+                  <ImageBackground 
+                    source={item.image} 
+                    style={styles.heroImageCard}
+                    imageStyle={{ borderRadius: 24 }}
                   >
-                    <Text style={styles.heroButtonText}>THỬ NGAY</Text>
-                    <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
-                  </TouchableOpacity>
+                    <View style={[styles.heroOverlay, { backgroundColor: ui.heroMask }] }>
+                      <View style={styles.badgePremium}>
+                        <Text style={styles.badgePremiumText}>{item.badge}</Text>
+                      </View>
+                      <View style={styles.heroTextContainer}>
+                        <Text style={[styles.heroTitle, { color: '#FFFFFF' }]}>{item.title}</Text>
+                        <Text style={[styles.heroSubtitle, { color: '#F1F5F9' }]}>{item.subtitle}</Text>
+                        <TouchableOpacity 
+                          style={styles.heroButton}
+                          onPress={() => {
+                            const product = premiumProducts.find(p => p.id === item.id);
+                            if (product) {
+                              navigation.navigate('ProductDetail', { item: product });
+                            }
+                          }}
+                        >
+                          <Text style={styles.heroButtonText}>THỬ NGAY</Text>
+                          <Ionicons name="arrow-forward" size={16} color="#1A1A1A" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </ImageBackground>
                 </View>
-              </View>
-            </ImageBackground>
+              )}
+            />
           </View>
 
           {/* DANH MỤC (Viên thuốc cẩm thạch) */}
@@ -306,7 +355,9 @@ const HomeScreen = ({ navigation }) => {
                 <View style={styles.premiumInfo}>
                   <Text style={[styles.premiumName, { color: ui.textPrimary }]} numberOfLines={2}>{item.name}</Text>
                   <View style={styles.premiumBottomRow}>
-                    <Text style={styles.premiumPrice}>{item.price}</Text>
+                    <Text style={styles.premiumPrice}>
+                      {typeof item.price === 'number' ? `${item.price.toLocaleString('vi-VN')} đ` : item.price}
+                    </Text>
                     <TouchableOpacity 
                       style={styles.goldAddButton}
                       onPress={() => {
@@ -433,7 +484,6 @@ const styles = StyleSheet.create({
   },
   // --- Hero Section ---
   heroSection: {
-    paddingHorizontal: 20,
     marginTop: 25,
     marginBottom: 25,
   },

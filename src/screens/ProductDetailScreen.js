@@ -297,7 +297,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <View style={styles.titleRow}>
             <Text style={styles.productName}>{item.name}</Text>
           </View>
-          <Text style={styles.productPrice}>{item.price}</Text>
+          <Text style={styles.productPrice}>
+            {typeof item.price === 'number' ? `${item.price.toLocaleString('vi-VN')} đ` : item.price}
+          </Text>
 
           {/* Đường kẻ ngang trang trí */}
           <View style={styles.divider} />
