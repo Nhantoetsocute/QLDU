@@ -5,6 +5,7 @@ const CartContext = createContext(null);
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
+  const isLoaded = React.useRef(false);
 
   useEffect(() => {
     const loadCart = async () => {
@@ -15,12 +16,15 @@ export const CartProvider = ({ children }) => {
         }
       } catch (e) {
         console.error("Lỗi khi load giỏ hàng:", e);
+      } finally {
+        isLoaded.current = true;
       }
     };
     loadCart();
   }, []);
 
   useEffect(() => {
+    if (!isLoaded.current) return; // Không ghi đè khi chưa load xong
     const saveCart = async () => {
       try {
         await AsyncStorage.setItem('@cart', JSON.stringify(cartItems));

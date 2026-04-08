@@ -16,11 +16,24 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useUserProfile } from '../context/UserProfileContext';
+import { useAppTheme } from '../theme/ThemeContext';
 
 const ORANGE_COLOR = '#E57905';
 
 const ProfileScreen = ({ navigation }) => {
   const { profile, avatarUri, updateProfile, updateAvatar } = useUserProfile();
+  const { isDarkMode, colors } = useAppTheme();
+
+  const ui = {
+    bg: colors.background,
+    card: isDarkMode ? '#1A1A1A' : '#F5F5F5',
+    text: colors.text,
+    subText: colors.subText,
+    inputBg: isDarkMode ? 'rgba(255,255,255,0.08)' : '#F5F5F5',
+    inputText: colors.text,
+    border: colors.border,
+    accent: colors.accent,
+  };
 
   const [originalProfile, setOriginalProfile] = useState(profile || {});
 
@@ -97,16 +110,16 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFF" />
+    <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={ui.bg} />
       
       {/* HEADER */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={26} color="#000" />
+          <Ionicons name="arrow-back" size={26} color={ui.accent} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Cập nhật thông tin</Text>
-        <View style={{ width: 26 }} /> {/* Spacer để cân bằng chữ ở giữa */}
+        <Text style={[styles.headerTitle, { color: ui.text }]}>Cập nhật thông tin</Text>
+        <View style={{ width: 26 }} />
       </View>
 
       <KeyboardAvoidingView 
@@ -121,70 +134,69 @@ const ProfileScreen = ({ navigation }) => {
               {typeof avatarUri === 'string' && avatarUri.trim() ? (
                 <Image
                   source={{ uri: avatarUri }}
-                  style={styles.avatar}
+                  style={[styles.avatar, { borderColor: ui.accent }]}
                 />
               ) : (
-                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: '#E5E7EB' }]}>
-                  <Ionicons name="person" size={50} color="#9CA3AF" />
+                <View style={[styles.avatar, { justifyContent: 'center', alignItems: 'center', backgroundColor: isDarkMode ? 'rgba(212,175,55,0.15)' : '#E5E7EB', borderColor: ui.accent }]}>
+                  <Ionicons name="person" size={50} color={ui.accent} />
                 </View>
               )}
             </TouchableOpacity>
-            {/* Nút Camera */}
-            <TouchableOpacity style={styles.cameraButton} activeOpacity={0.8} onPress={handlePickAvatar}>
-              <Ionicons name="camera" size={18} color="#FFF" />
+            <TouchableOpacity style={[styles.cameraButton, { backgroundColor: ui.accent }]} activeOpacity={0.8} onPress={handlePickAvatar}>
+              <Ionicons name="camera" size={18} color={isDarkMode ? '#1A1A1A' : '#FFF'} />
             </TouchableOpacity>
           </View>
 
           {/* FORM NHẬP LIỆU */}
           <View style={styles.formContainer}>
-            {/* Họ và tên */}
-            <Text style={styles.label}>Họ và tên</Text>
+            <Text style={[styles.label, { color: ui.text }]}>Họ và tên</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: ui.inputBg, color: ui.inputText }]}
               value={name}
               onChangeText={setName}
               placeholder="Nhập họ và tên"
+              placeholderTextColor={ui.subText}
             />
 
-            {/* Email */}
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: ui.text }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: ui.inputBg, color: ui.inputText }]}
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
               autoCapitalize="none"
               placeholder="Nhập email"
+              placeholderTextColor={ui.subText}
             />
 
-            {/* Số điện thoại */}
-            <Text style={styles.label}>Số điện thoại</Text>
+            <Text style={[styles.label, { color: ui.text }]}>Số điện thoại</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: ui.inputBg, color: ui.inputText }]}
               value={phone}
               onChangeText={setPhone}
               keyboardType="phone-pad"
               placeholder="Nhập số điện thoại"
+              placeholderTextColor={ui.subText}
             />
 
-            {/* Địa chỉ */}
-            <Text style={styles.label}>Địa chỉ</Text>
+            <Text style={[styles.label, { color: ui.text }]}>Địa chỉ</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: ui.inputBg, color: ui.inputText }]}
               value={address}
               onChangeText={setAddress}
               placeholder="Nhập địa chỉ"
+              placeholderTextColor={ui.subText}
             />
           </View>
 
           {/* NÚT CẬP NHẬT */}
           <TouchableOpacity 
-            style={[styles.updateButton, isChanged ? styles.updateButtonActive : null]}
+            style={[styles.updateButton, { backgroundColor: isDarkMode ? '#333' : '#E5E5E5' }, isChanged && { backgroundColor: ui.accent }]}
             onPress={handleUpdate}
             disabled={!isChanged}
             activeOpacity={0.8}
           >
-            <Text style={[styles.updateButtonText, isChanged ? styles.updateButtonTextActive : null]}>
+            <Text style={[styles.updateButtonText, { color: isDarkMode ? '#666' : '#888' }, isChanged && { color: isDarkMode ? '#1A1A1A' : '#FFF' }]}>
               Cập nhật tài khoản
             </Text>
           </TouchableOpacity>

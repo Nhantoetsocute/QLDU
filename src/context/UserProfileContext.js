@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo, useState, useEffect } from 'react';
+import React, { createContext, useContext, useMemo, useState, useEffect, useCallback } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const UserProfileContext = createContext(null);
@@ -28,7 +28,7 @@ export const UserProfileProvider = ({ children }) => {
     loadAuthData();
   }, []);
 
-  const loginContext = async (newToken, userProfile) => {
+  const loginContext = useCallback(async (newToken, userProfile) => {
     try {
       await AsyncStorage.setItem('@user_token', newToken);
       await AsyncStorage.setItem('@user_profile', JSON.stringify(userProfile));
@@ -37,16 +37,31 @@ export const UserProfileProvider = ({ children }) => {
     } catch (e) {
       console.error(e);
     }
-  };
+  }, []);
 
-  const logoutContext = async () => {
+  const logoutContext = useCallback(async () => {
     try {
       await AsyncStorage.removeItem('@user_token');
       await AsyncStorage.removeItem('@user_profile');
       setToken(null);
       setProfile(null);
     } catch (e) {}
-  };
+  }, []);
+
+  const updateProfile = useCallback((nextProfile) => {
+    setProfile(nextProfile);
+    AsyncStorage.setItem('@user_profile', JSON.stringify(nextProfile));
+  }, []);
+
+  const updateAvatar = useCallback((nextAvatarUri) => {
+    setAvatarUri(nextAvatarUri);
+    setProfile((prev) => {
+      if (!prev) return prev;
+      const updatedProfile = { ...prev, avatarUri: nextAvatarUri };
+      AsyncStorage.setItem('@user_profile', JSON.stringify(updatedProfile));
+      return updatedProfile;
+    });
+  }, []);
 
   const value = useMemo(
     () => ({
@@ -56,20 +71,10 @@ export const UserProfileProvider = ({ children }) => {
       avatarUri,
       loginContext,
       logoutContext,
-      updateProfile: (nextProfile) => {
-          setProfile(nextProfile);
-          AsyncStorage.setItem('@user_profile', JSON.stringify(nextProfile));
-      },
-      updateAvatar: (nextAvatarUri) => {
-          setAvatarUri(nextAvatarUri);
-          if (profile) {
-              const updatedProfile = { ...profile, avatarUri: nextAvatarUri };
-              setProfile(updatedProfile);
-              AsyncStorage.setItem('@user_profile', JSON.stringify(updatedProfile));
-          }
-      },
+      updateProfile,
+      updateAvatar,
     }),
-    [profile, token, isLoading, avatarUri]
+    [profile, token, isLoading, avatarUri, loginContext, logoutContext, updateProfile, updateAvatar]
   );
 
   return <UserProfileContext.Provider value={value}>{children}</UserProfileContext.Provider>;
