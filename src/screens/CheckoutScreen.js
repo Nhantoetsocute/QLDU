@@ -5,8 +5,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  TouchableWithoutFeedback,
-  Keyboard,
   ScrollView,
   StatusBar,
   Alert,
@@ -174,7 +172,6 @@ const CheckoutScreen = ({ navigation }) => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}> 
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
 
@@ -194,9 +191,10 @@ const CheckoutScreen = ({ navigation }) => {
         >
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.scrollContent, { paddingBottom: 110 }]}
-            keyboardShouldPersistTaps="handled"
-            keyboardDismissMode="on-drag"
+            contentContainerStyle={[styles.scrollContent, { paddingBottom: 110, flexGrow: 1 }]}
+            keyboardShouldPersistTaps="always"
+            keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+            nestedScrollEnabled
           >
           {/* ORDER SUMMARY */}
           <Text style={[styles.sectionLabel, { color: ui.subText }]}>ĐƠN HÀNG ({cartItems.length} MÓN)</Text>
@@ -383,7 +381,6 @@ const CheckoutScreen = ({ navigation }) => {
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>
-    </TouchableWithoutFeedback>
   );
 };
 
