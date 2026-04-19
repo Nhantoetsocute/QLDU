@@ -158,7 +158,7 @@ const heroBanners = [
 
 const HomeScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
-  const { profile, logoutContext } = useUserProfile();
+  const { profile, logoutContext, avatarUri } = useUserProfile();
   const { cartItems, addToCart } = useCart();
 
   const getGreeting = () => {
@@ -234,9 +234,9 @@ const HomeScreen = ({ navigation }) => {
               }}
               activeOpacity={0.7}
             >
-              {profile?.avatar ? (
+              {(avatarUri || profile?.avatar) ? (
                 <Image
-                  source={{ uri: profile.avatar }}
+                  source={{ uri: avatarUri || profile.avatar }}
                   style={styles.avatar}
                 />
               ) : (

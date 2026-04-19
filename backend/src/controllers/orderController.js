@@ -14,13 +14,18 @@ exports.getOrderHistory = async (req, res) => {
                 p.TenPhuongThuc as payment,
                 o.DeliveryAddress as address,
                 COUNT(od.OrderDetailId) as itemCount,
-                MIN(f.FoodName) as mainItem,
-                MIN(f.ImageUrl) as image
+                (SELECT f2.FoodName FROM OrderDetails od2 
+                 JOIN Food f2 ON od2.FoodId = f2.FoodId 
+                 WHERE od2.OrderId = o.OrderId 
+                 ORDER BY od2.OrderDetailId ASC LIMIT 1) as mainItem,
+                (SELECT f2.ImageUrl FROM OrderDetails od2 
+                 JOIN Food f2 ON od2.FoodId = f2.FoodId 
+                 WHERE od2.OrderId = o.OrderId 
+                 ORDER BY od2.OrderDetailId ASC LIMIT 1) as image
             FROM Orders o
             LEFT JOIN OrderStatus s ON o.StatusId = s.StatusId
             LEFT JOIN PhuongThucThanhToan p ON o.PaymentMethodId = p.PaymentMethodId
             LEFT JOIN OrderDetails od ON od.OrderId = o.OrderId
-            LEFT JOIN Food f ON od.FoodId = f.FoodId
             WHERE o.UserId = ?
             GROUP BY o.OrderId, o.OrderCode, o.OrderDate, s.StatusName, 
                      o.TotalAmount, p.TenPhuongThuc, o.DeliveryAddress
@@ -29,11 +34,17 @@ exports.getOrderHistory = async (req, res) => {
         `;
         const [rows] = await pool.execute(sql, [req.user.userId]);
         
-        // Map status names to frontend convention
+        // Xây dựng base URL cho ảnh
+        const reqHost = req.headers['host'] || `localhost:${process.env.PORT || 3000}`;
+        const protocol = req.headers['x-forwarded-proto'] || 'http';
+        const baseUrl = `${protocol}://${reqHost}`;
+
+        // Map status names to frontend convention + build full image URL
         const statusMap = { preparing: 'preparing', shipping: 'shipping', completed: 'delivered', cancelled: 'cancelled' };
         const mappedRows = rows.map(r => ({
             ...r,
-            status: statusMap[r.status] || 'preparing'
+            status: statusMap[r.status] || 'preparing',
+            image: r.image ? `${baseUrl}${r.image}` : null
         }));
 
         res.json(mappedRows);

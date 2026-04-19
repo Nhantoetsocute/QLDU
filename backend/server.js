@@ -9,6 +9,9 @@ const userRoutes = require('./src/routes/userRoutes');
 const voucherRoutes = require('./src/routes/voucherRoutes');
 const cartRoutes = require('./src/routes/cartRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
+const vnpayRoutes = require('./src/routes/vnpayRoutes');
+
+const path = require('path');
 
 const app = express();
 
@@ -19,6 +22,12 @@ app.use(express.json({ limit: '2mb' }));
 
 // CORS: cho phép app mobile kết nối
 app.use(cors());
+
+// Serve ảnh sản phẩm tĩnh
+app.use('/images', express.static(path.join(__dirname, 'public', 'images')));
+
+// Serve ảnh đại diện
+app.use('/avatars', express.static(path.join(__dirname, 'public', 'avatars')));
 
 // Request logger — ghi log mỗi request để debug
 app.use((req, res, next) => {
@@ -41,12 +50,13 @@ app.use('/api/user', userRoutes);     // /api/user/profile
 app.use('/api/vouchers', voucherRoutes); // /api/vouchers
 app.use('/api/cart', cartRoutes);     // /api/cart
 app.use('/api/orders', orderRoutes);  // /api/orders
+app.use('/api/vnpay', vnpayRoutes);   // /api/vnpay/create-payment-url, /api/vnpay/return
 app.use('/api', foodRoutes);          // /api/food, /api/categories
 
 // ======== HEALTH CHECK ========
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         uptime: Math.floor(process.uptime()),
         timestamp: new Date().toISOString()
     });
@@ -67,17 +77,17 @@ app.use((err, req, res, next) => {
 
 // ======== GRACEFUL SHUTDOWN ========
 const server = app.listen(PORT, () => {
-    console.log(`🚀 QuanLyBanNuoc Backend đang chạy tại: http://localhost:${PORT}`);
-    console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    console.log(`QuanLyBanNuoc Backend đang chạy tại: http://localhost:${PORT}`);
+    console.log(` Health check: http://localhost:${PORT}/api/health`);
 });
 
 // Đóng server và DB pool sạch sẽ khi tắt process
 const shutdown = (signal) => {
-    console.log(`\n🛑 Nhận tín hiệu ${signal}. Đang tắt server...`);
+    console.log(`\nNhận tín hiệu ${signal}. Đang tắt server...`);
     server.close(() => {
         const pool = require('./src/config/db');
         pool.end().then(() => {
-            console.log('✅ Database pool đã đóng. Tạm biệt!');
+            console.log('Database pool đã đóng. Tạm biệt!');
             process.exit(0);
         });
     });

@@ -19,11 +19,12 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useAppTheme } from '../theme/ThemeContext';
+import { apiUrl } from '../config/api';
 
 const ORANGE_COLOR = '#E57905';
 
 const ProfileScreen = ({ navigation }) => {
-  const { profile, avatarUri, updateProfile, updateAvatar } = useUserProfile();
+  const { profile, avatarUri, updateProfile, updateAvatar, token } = useUserProfile();
   const { isDarkMode, colors } = useAppTheme();
 
   const ui = {
@@ -78,11 +79,43 @@ const ProfileScreen = ({ navigation }) => {
       });
 
       if (!result.canceled && result.assets?.length) {
-        updateAvatar(result.assets[0].uri);
-        Alert.alert('Thành công', 'Ảnh đại diện đã được cập nhật.');
+        const pickedUri = result.assets[0].uri;
+
+        // Hiển thị ảnh ngay lập tức (optimistic update)
+        updateAvatar(pickedUri);
+
+        // Upload lên server
+        const formData = new FormData();
+        const filename = pickedUri.split('/').pop();
+        const ext = filename.split('.').pop();
+        const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+        formData.append('avatar', {
+          uri: pickedUri,
+          name: filename,
+          type: mimeType,
+        });
+
+        const res = await fetch(apiUrl('/api/user/avatar'), {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok && data.avatar) {
+          // Cập nhật với URL server (vĩnh viễn)
+          updateAvatar(data.avatar);
+          Alert.alert('Thành công', 'Ảnh đại diện đã được cập nhật.');
+        } else {
+          Alert.alert('Lỗi', data.error || 'Không thể lưu ảnh đại diện.');
+        }
       }
     } catch (error) {
-      Alert.alert('Lỗi', 'Không thể chọn ảnh. Vui lòng thử lại.');
+      console.error('Avatar upload error:', error);
+      Alert.alert('Lỗi', 'Không thể chọn hoặc upload ảnh. Vui lòng thử lại.');
     }
   };
 

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,70 +10,21 @@ import {
   Animated,
   StatusBar,
   ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
+import { useUserProfile } from '../context/UserProfileContext';
+import { apiUrl } from '../config/api';
 
-// --- NGHIỆP VỤ: DỮ LIỆU MẪU ĐƯỢC MỞ RỘNG ---
+// --- NGHIỆP VỤ: TABS TRẠNG THÁI ---
 const orderTabs = [
   { id: 'all', name: 'Tất cả' },
   { id: 'preparing', name: 'Đang chuẩn bị' },
   { id: 'shipping', name: 'Đang giao' },
   { id: 'delivered', name: 'Đã giao' },
   { id: 'cancelled', name: 'Đã hủy' },
-];
-
-const mockOrders = [
-  {
-    id: 'TJ-8899',
-    date: '15:30 • 12/10/2023',
-    status: 'shipping',
-    type: 'Delivery', // Hình thức
-    total: '215.000 đ',
-    itemCount: 3,
-    mainItem: 'Trà đào cam xả',
-    payment: 'Đã thanh toán (Ví True Juice)',
-    address: '28 Nguyễn Huệ, Q.1, TP.HCM',
-    image: require('../../assets/images/tra_cam_xa.jpg'),
-  },
-  {
-    id: 'TJ-8898',
-    date: '09:15 • 12/10/2023',
-    status: 'preparing',
-    type: 'Takeaway',
-    total: '85.000 đ',
-    itemCount: 1,
-    mainItem: 'Cold Brew Thượng Hạng',
-    payment: 'Thanh toán khi nhận',
-    pickupCode: 'A-12',
-    image: require('../../assets/images/cold_brew.jpg'),
-  },
-  {
-    id: 'TJ-8850',
-    date: '14:20 • 10/10/2023',
-    status: 'delivered',
-    type: 'Dine-in',
-    total: '350.000 đ',
-    itemCount: 4,
-    mainItem: 'Nước ép rau má',
-    payment: 'Đã thanh toán (Thẻ)',
-    table: 'Bàn VIP 05',
-    image: require('../../assets/images/rauma.jpg'),
-  },
-  {
-    id: 'TJ-8842',
-    date: '08:00 • 05/10/2023',
-    status: 'cancelled',
-    type: 'Delivery',
-    total: '95.000 đ',
-    itemCount: 2,
-    mainItem: 'Trà chanh',
-    payment: 'Đã hoàn tiền',
-    address: '12 Lê Lợi, Q.1, TP.HCM',
-    cancelReason: 'Hủy theo yêu cầu khách hàng',
-    image: require('../../assets/images/tra_chanh.webp'),
-  },
 ];
 
 // --- HÀM NGHIỆP VỤ ---
@@ -107,6 +58,7 @@ const getTypeLabel = (type) => {
 
 const OrderHistoryScreen = ({ navigation, route }) => {
   const { isDarkMode, colors } = useAppTheme();
+  const { token } = useUserProfile();
   const ui = {
     cardBg: isDarkMode ? 'rgba(255, 255, 255, 0.04)' : 'rgba(248, 250, 252, 0.92)',
     cardBorder: isDarkMode ? 'rgba(212, 175, 55, 0.15)' : 'rgba(184, 134, 11, 0.24)',
@@ -122,11 +74,45 @@ const OrderHistoryScreen = ({ navigation, route }) => {
   };
 
   const [activeTab, setActiveTab] = useState('all');
-  const [orders, setOrders] = useState(mockOrders);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Animation mượt mà hơn với translateY
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
+
+  // Hàm gọi API lấy lịch sử đơn hàng từ database
+  const fetchOrders = useCallback(async () => {
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const res = await fetch(apiUrl('/api/orders'), {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error('Lỗi tải đơn hàng');
+      const data = await res.json();
+      setOrders(data);
+    } catch (err) {
+      console.error('fetchOrders error:', err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  // Gọi API khi màn hình được mount hoặc khi có newOrder params (trigger refresh)
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  // Khi navigate từ Checkout/VNPay với newOrder param → refresh danh sách
+  useEffect(() => {
+    if (route?.params?.newOrder || route?.params?.refresh) {
+      fetchOrders();
+    }
+  }, [route?.params?.newOrder, route?.params?.refresh]);
 
   useEffect(() => {
     fadeAnim.setValue(0);
@@ -136,18 +122,6 @@ const OrderHistoryScreen = ({ navigation, route }) => {
       Animated.timing(slideAnim, { toValue: 0, duration: 400, useNativeDriver: true })
     ]).start();
   }, [activeTab]);
-
-  useEffect(() => {
-    const newOrder = route?.params?.newOrder;
-    if (!newOrder) return;
-
-    const uniqueOrder = {
-      ...newOrder,
-      id: `${newOrder.id}-${Date.now()}`,
-    };
-
-    setOrders((prev) => [uniqueOrder, ...prev]);
-  }, [route?.params?.newOrder]);
 
   // Lọc nghiệp vụ: Tab Lịch sử hiển thị cả Delivered và Cancelled
   const filteredOrders = orders.filter(order => {
@@ -192,7 +166,13 @@ const OrderHistoryScreen = ({ navigation, route }) => {
 
         {/* Body Card: Thông tin món */}
         <View style={styles.cardBody}>
-          <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.orderImage} />
+          {item.image ? (
+            <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.orderImage} />
+          ) : (
+            <View style={[styles.orderImage, { backgroundColor: 'rgba(212,175,55,0.1)', justifyContent: 'center', alignItems: 'center' }]}>
+              <Ionicons name="receipt-outline" size={28} color="rgba(212,175,55,0.4)" />
+            </View>
+          )}
           <View style={styles.orderInfo}>
             <View style={styles.titleRow}>
                <Text style={[styles.mainItemName, { color: ui.textPrimary }]} numberOfLines={1}>{item.mainItem}</Text>
@@ -200,7 +180,7 @@ const OrderHistoryScreen = ({ navigation, route }) => {
             </View>
             <Text style={[styles.orderDate, { color: ui.textMuted }]}>{item.date}</Text>
             <Text style={[styles.orderSubInfo, { color: ui.textSecondary }]} numberOfLines={1}>
-              {item.type === 'Delivery' ? `📍 ${item.address}` : item.type === 'Takeaway' ? `🎫 Mã nhận: ${item.pickupCode}` : `🍽️ ${item.table}`}
+              {item.type === 'Delivery' ? `📍 ${item.address || 'Chưa có địa chỉ'}` : item.type === 'Takeaway' ? `🎫 Mã nhận: ${item.pickupCode}` : `🍽️ ${item.table || 'Tại quán'}`}
             </Text>
             <Text style={[styles.orderSubInfo, { color: ui.textSecondary }]} numberOfLines={1}>💳 {item.payment}</Text>
             

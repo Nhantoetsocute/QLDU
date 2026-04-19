@@ -20,12 +20,14 @@ import {
 import { Ionicons, Feather } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { useUserProfile } from '../context/UserProfileContext';
 
 const { width, height } = Dimensions.get('window');
 
 const ProductDetailScreen = ({ route, navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const { addToCart } = useCart();
+  const { profile } = useUserProfile();
   const accent = colors.accent || '#D4AF37';
   const ui = {
     surface: colors.background,
@@ -250,7 +252,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
         navigation.push('VNPayScreen', {
           amount: invoice.finalTotal,
           orderInfo: `Thanh toan don hang ${orderCode}`,
-          newOrder: newOrder,
+          receiverName: profile?.name || 'Khach hang',
+          receiverPhone: profile?.phone || '0000000000',
+          deliveryAddress: deliveryAddress.trim(),
+          note: '',
+          voucherId: null,
+          cartItems: [{
+            productId: item.id || item.productId,
+            id: item.id || `item-${Date.now()}`,
+            quantity: quantity,
+            name: item.name,
+            price: parsePrice(item.price),
+          }],
         });
       } else {
         setHasPurchased(true);

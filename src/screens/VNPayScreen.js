@@ -1,28 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, ActivityIndicator, Alert, SafeAreaView, Text, TouchableOpacity } from 'react-native';
 import { WebView } from 'react-native-webview';
-
-// Đổi URL này thành backend thật của bạn
-const CREATE_VNPAY_URL_API = 'https://your-backend-domain.com/api/vnpay/create-payment-url';
+import { useUserProfile } from '../context/UserProfileContext';
+import { useCart } from '../context/CartContext';
+import { apiUrl } from '../config/api';
 
 const VNPayScreen = ({ route, navigation }) => {
-  const { amount, orderInfo, newOrder, reservationData } = route.params || {};
+  const {
+    amount,
+    orderInfo,
+    receiverName,
+    receiverPhone,
+    deliveryAddress,
+    note,
+    voucherId,
+    cartItems: cartItemsParam,
+  } = route.params || {};
+
+  const { token } = useUserProfile();
+  const { clearCart } = useCart();
+
   const [paymentUrl, setPaymentUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+  const hasHandledResult = useRef(false);
 
   useEffect(() => {
     const createPaymentUrl = async () => {
       try {
-        const response = await fetch(CREATE_VNPAY_URL_API, {
+        const response = await fetch(apiUrl('/api/vnpay/create-payment-url'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
           },
           body: JSON.stringify({
             amount,
             orderInfo,
-            orderId: newOrder?.id,
+            receiverName,
+            receiverPhone,
+            deliveryAddress,
+            note,
+            voucherId,
+            cartItems: cartItemsParam,
           }),
         });
 
@@ -33,12 +53,14 @@ const VNPayScreen = ({ route, navigation }) => {
 
         setPaymentUrl(data.paymentUrl.trim());
       } catch (error) {
+        console.error('VNPay create URL error:', error);
         setLoadError('Không thể tạo liên kết thanh toán VNPAY. Vui lòng thử lại sau.');
-        Alert.alert('Lỗi thanh toán', 'Không thể mở VNPAY. Bạn có thể quay về Trang Chủ.', [
+        Alert.alert('Lỗi thanh toán', error.message || 'Không thể mở VNPAY.', [
           {
             text: 'Về Trang Chủ',
             onPress: () => navigation.navigate('MainTabs', { screen: 'Trang Chủ' }),
           },
+          { text: 'Quay lại', onPress: () => navigation.goBack() },
         ]);
       } finally {
         setLoading(false);
@@ -46,7 +68,7 @@ const VNPayScreen = ({ route, navigation }) => {
     };
 
     createPaymentUrl();
-  }, [amount, navigation, newOrder?.id, orderInfo]);
+  }, []);
 
   const getQueryParam = (url, key) => {
     const match = url.match(new RegExp(`[?&]${key}=([^&]+)`));
@@ -56,25 +78,26 @@ const VNPayScreen = ({ route, navigation }) => {
   const handleNavigationStateChange = (navState) => {
     const { url } = navState;
 
-    // Khi VNPAY redirect về returnUrl từ backend
+    // Khi VNPay redirect về returnUrl từ backend (chứa vnp_ResponseCode)
     if (!url || !url.includes('vnp_ResponseCode=')) return;
+
+    // Tránh xử lý nhiều lần (WebView gọi onNavigationStateChange 2+ lần)
+    if (hasHandledResult.current) return;
+    hasHandledResult.current = true;
 
     const responseCode = getQueryParam(url, 'vnp_ResponseCode');
     if (responseCode === '00') {
-      Alert.alert('Thành công', 'Thanh toán VNPAY thành công!');
-      if (reservationData?.storeId) {
-        navigation.navigate('MainTabs', {
-          screen: 'Cửa Hàng',
-          params: {
-            reservationResult: reservationData,
-          },
-        });
-      } else {
-        navigation.navigate('MainTabs', {
-          screen: 'Đặt Hàng',
-          params: { newOrder },
-        });
-      }
+      // Thanh toán thành công → xoá giỏ hàng + navigate về danh sách đơn hàng (refresh từ DB)
+      clearCart();
+      Alert.alert(' Thành công', 'Thanh toán VNPAY thành công!', [
+        {
+          text: 'Xem đơn hàng',
+          onPress: () => navigation.navigate('MainTabs', {
+            screen: 'Đặt Hàng',
+            params: { refresh: Date.now() },
+          }),
+        },
+      ]);
     } else {
       Alert.alert('Thất bại', 'Giao dịch bị huỷ hoặc có lỗi xảy ra.');
       navigation.goBack();
@@ -83,7 +106,7 @@ const VNPayScreen = ({ route, navigation }) => {
 
   const handleWebViewError = () => {
     setLoadError('Đã xảy ra lỗi khi tải cổng thanh toán VNPAY.');
-    Alert.alert('Lỗi tải trang', 'Không thể mở cổng VNPAY. Bạn có thể quay về Trang Chủ.', [
+    Alert.alert('Lỗi tải trang', 'Không thể mở cổng VNPAY.', [
       {
         text: 'Về Trang Chủ',
         onPress: () => navigation.navigate('MainTabs', { screen: 'Trang Chủ' }),
@@ -96,6 +119,7 @@ const VNPayScreen = ({ route, navigation }) => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color="#D4AF37" />
+        <Text style={styles.loadingText}>Đang tạo liên kết thanh toán...</Text>
       </View>
     );
   }
@@ -106,9 +130,9 @@ const VNPayScreen = ({ route, navigation }) => {
         <Text style={styles.errorText}>{loadError || 'Không thể mở cổng thanh toán VNPAY.'}</Text>
         <TouchableOpacity
           style={styles.homeBtn}
-          onPress={() => navigation.navigate('MainTabs', { screen: 'Trang Chủ' })}
+          onPress={() => navigation.goBack()}
         >
-          <Text style={styles.homeBtnText}>Về Trang Chủ</Text>
+          <Text style={styles.homeBtnText}>Quay lại</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -142,6 +166,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#0A0A0A',
   },
+  loadingText: {
+    color: '#D4AF37',
+    marginTop: 16,
+    fontSize: 14,
+  },
   webviewLoader: {
     position: 'absolute',
     top: '50%',
@@ -165,7 +194,7 @@ const styles = StyleSheet.create({
   homeBtnText: {
     color: '#1A1A1A',
     fontWeight: '700',
-  }
+  },
 });
 
 export default VNPayScreen;

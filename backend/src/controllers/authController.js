@@ -108,6 +108,14 @@ exports.login = async (req, res) => {
             { expiresIn: '30d' }
         );
 
+        // Build full avatar URL
+        let avatarFullUrl = null;
+        if (user.AvatarUrl) {
+            const reqHost = req.headers['host'] || `localhost:${process.env.PORT || 3000}`;
+            const protocol = req.headers['x-forwarded-proto'] || 'http';
+            avatarFullUrl = `${protocol}://${reqHost}${user.AvatarUrl}`;
+        }
+
         res.json({ 
             message: "Đăng nhập thành công", 
             token,
@@ -117,7 +125,7 @@ exports.login = async (req, res) => {
                 name: user.UserName,
                 email: user.Email,
                 phone: user.Phone,
-                avatar: user.AvatarUrl
+                avatar: avatarFullUrl
             }
         });
     } catch (error) {

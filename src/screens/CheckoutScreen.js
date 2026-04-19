@@ -90,74 +90,63 @@ const CheckoutScreen = ({ navigation }) => {
 
     const paymentMethod = paymentMethods.find(p => p.id === selectedPayment);
 
-    // For VNPAY, navigate to VNPay screen
+    // For VNPAY, navigate to VNPay screen — backend se tao don hang
     if (selectedPayment === 2) {
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const yyyy = now.getFullYear();
-      const orderCode = `TJ-${now.getTime().toString().slice(-6)}`;
-
-      const newOrder = {
-        id: orderCode,
-        date: `${hh}:${mm} • ${dd}/${mo}/${yyyy}`,
-        status: 'preparing',
-        type: 'Delivery',
-        total: formatPrice(total),
-        itemCount: cartItems.length,
-        mainItem: cartItems[0]?.name || 'Đơn hàng',
-        payment: `Đã thanh toán (VNPAY)`,
-        address: deliveryAddress,
-        image: cartItems[0]?.image,
-      };
-
       navigation.navigate('VNPayScreen', {
         amount: total,
-        orderInfo: `Thanh toan don hang ${orderCode}`,
-        newOrder,
-        clearCartAfter: true,
+        orderInfo: `Thanh toan don hang`,
+        receiverName: receiverName.trim(),
+        receiverPhone: receiverPhone.trim(),
+        deliveryAddress: deliveryAddress.trim(),
+        note: note.trim(),
+        voucherId: null,
+        cartItems: cartItems.map(item => ({
+          productId: item.productId || item.id,
+          id: item.id,
+          quantity: item.quantity,
+          name: item.name,
+          price: item.price,
+        })),
       });
       return;
     }
 
-    // For COD, create order directly
+    // For COD, create order via API
     setIsLoading(true);
     try {
-      const now = new Date();
-      const hh = String(now.getHours()).padStart(2, '0');
-      const mm = String(now.getMinutes()).padStart(2, '0');
-      const dd = String(now.getDate()).padStart(2, '0');
-      const mo = String(now.getMonth() + 1).padStart(2, '0');
-      const yyyy = now.getFullYear();
-      const orderCode = `TJ-${now.getTime().toString().slice(-6)}`;
+      const res = await fetch(apiUrl('/api/orders'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          paymentMethodId: 1,
+          receiverName: receiverName.trim(),
+          receiverPhone: receiverPhone.trim(),
+          deliveryAddress: deliveryAddress.trim(),
+          note: note.trim(),
+          voucherId: null,
+        }),
+      });
 
-      const newOrder = {
-        id: orderCode,
-        date: `${hh}:${mm} • ${dd}/${mo}/${yyyy}`,
-        status: 'preparing',
-        type: 'Delivery',
-        total: formatPrice(total),
-        itemCount: cartItems.length,
-        mainItem: cartItems[0]?.name || 'Đơn hàng',
-        payment: 'Thanh toán khi nhận (COD)',
-        address: deliveryAddress,
-        image: cartItems[0]?.image,
-      };
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || 'Không thể tạo đơn hàng');
+      }
 
       clearCart();
 
       Alert.alert(
         '🎉 Đặt hàng thành công!',
-        `Mã đơn: ${orderCode}\nTổng thanh toán: ${formatPrice(total)}\n\nShipper sẽ liên hệ bạn sớm nhất!`,
+        `Mã đơn: ${data.orderCode}\nTổng thanh toán: ${formatPrice(data.totalAmount)}\n\nShipper sẽ liên hệ bạn sớm nhất!`,
         [
           {
             text: 'Xem đơn hàng',
             onPress: () => {
               navigation.navigate('MainTabs', {
                 screen: 'Đặt Hàng',
-                params: { newOrder },
+                params: { refresh: Date.now() },
               });
             },
           },
@@ -165,7 +154,7 @@ const CheckoutScreen = ({ navigation }) => {
       );
     } catch (error) {
       console.error(error);
-      Alert.alert('Lỗi', 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+      Alert.alert('Lỗi', error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
