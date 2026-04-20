@@ -83,6 +83,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
   ]);
   const slideUpAnim = useRef(new Animated.Value(50)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const mainScrollRef = useRef(null);
+  const scrollYRef = useRef(0);
+  const viewportHeightRef = useRef(height);
+  const contentHeightRef = useRef(height);
 
   const ownedDiscountVouchers = [
     { id: 'd1', title: 'Giảm 15% tối đa 40.000đ', type: 'percent', value: 15, maxDiscount: 40000, minOrder: 50000 },
@@ -295,19 +299,18 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-      <View style={[styles.container, { backgroundColor: colors.background }] }>
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
       {/* ẢNH SẢN PHẨM TRÀN VIỀN */}
-      <View style={styles.imageContainer}>
+      <View style={styles.imageContainer} pointerEvents="none">
         <Image source={imageSource} style={styles.productImage} />
         {/* Lớp gradient đen từ dưới lên để hòa trộn mượt mà với nền */}
         <View style={[styles.gradientOverlay, { backgroundColor: isDarkMode ? 'rgba(10,10,10,0.6)' : 'rgba(255,255,255,0.18)' }]} />
       </View>
 
       {/* HEADER NÚT BACK (Nổi trên ảnh) */}
-      <View style={styles.header}>
+      <View style={styles.header} pointerEvents="box-none">
         <TouchableOpacity style={[styles.iconButton, { backgroundColor: ui.overlayBtn, borderColor: isDarkMode ? 'rgba(212, 175, 55, 0.3)' : 'rgba(0,0,0,0.12)' }]} onPress={() => navigation.goBack()}>
           <Ionicons name="chevron-back" size={28} color={accent} />
         </TouchableOpacity>
@@ -318,10 +321,23 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
       {/* NỘI DUNG CHI TIẾT SẢN PHẨM */}
       <ScrollView 
+        ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
+        keyboardShouldPersistTaps="always"
         keyboardDismissMode="on-drag"
+        nestedScrollEnabled
+        decelerationRate="normal"
+        scrollEventThrottle={16}
+        onScroll={(event) => {
+          scrollYRef.current = event.nativeEvent.contentOffset.y;
+        }}
+        onLayout={(event) => {
+          viewportHeightRef.current = event.nativeEvent.layout.height;
+        }}
+        onContentSizeChange={(_, contentHeight) => {
+          contentHeightRef.current = contentHeight;
+        }}
       >
         <Animated.View 
           style={[styles.detailsContainer, { backgroundColor: ui.surface, borderColor: ui.border, opacity: fadeAnim, transform: [{ translateY: slideUpAnim }] }]}
@@ -339,16 +355,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
           {/* Mô tả */}
           <Text style={[styles.sectionTitle, { color: accent }]}>Mô tả hương vị</Text>
-          <ScrollView
-            style={styles.descriptionScroll}
-            showsVerticalScrollIndicator
-            nestedScrollEnabled
-            keyboardShouldPersistTaps="handled"
-          >
+          <View style={styles.descriptionScroll}>
             <Text style={[styles.descriptionText, { color: ui.subText }]}> 
               {item.description || 'Hương vị tuyệt hảo được pha chế từ những nguyên liệu thượng hạng nhất, mang đến cho bạn trải nghiệm xa xỉ đích thực.'}
             </Text>
-          </ScrollView>
+          </View>
 
           {/* Chỉnh số lượng */}
           <View style={[styles.quantitySection, { backgroundColor: ui.card, borderColor: ui.border }]}>
@@ -538,7 +549,6 @@ const ProductDetailScreen = ({ route, navigation }) => {
       </Modal>
 
       </View>
-    </TouchableWithoutFeedback>
   );
 };
 
