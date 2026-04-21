@@ -53,7 +53,7 @@ const LanguageScreen = ({ navigation }) => {
     try {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) setSelected(stored);
-    } catch (e) {}
+    } catch (e) { }
   };
 
   const selectLanguage = async (id) => {
