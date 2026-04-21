@@ -423,20 +423,20 @@ INSERT INTO Size (SizeName, ExtraPrice)
 VALUES ('S', 0), ('M', 5000), ('L', 10000)
 ON DUPLICATE KEY UPDATE ExtraPrice = VALUES(ExtraPrice);
 
--- ── Danh mục ──
-INSERT INTO Category (CategoryName) VALUES
-  ('Cà phê'),
-  ('Trà sữa'),
-  ('Trà trái cây'),
-  ('Sinh tố'),
-  ('Nước ép'),
-  ('Đá xay'),
-  ('Topping & Snack')
+-- ── Danh mục (đồng bộ với seed_food.js) ──
+INSERT INTO Category (CategoryId, CategoryName) VALUES
+  (1, 'Cà phê'),
+  (2, 'Trà'),
+  (3, 'Sinh tố'),
+  (4, 'Nước ép'),
+  (5, 'Sữa'),
+  (6, 'Giải khát'),
+  (7, 'Dinh dưỡng')
 ON DUPLICATE KEY UPDATE CategoryName = VALUES(CategoryName);
 
 -- ── Topping ──
 INSERT INTO Topping (ToppingName, Price) VALUES
-  ('Trân châu đen',  5000),
+  ('Trân châu đen',   5000),
   ('Trân châu trắng', 5000),
   ('Thạch dừa',       5000),
   ('Thạch trái cây',  7000),
@@ -446,45 +446,29 @@ INSERT INTO Topping (ToppingName, Price) VALUES
   ('Sương sáo',       5000)
 ON DUPLICATE KEY UPDATE Price = VALUES(Price);
 
--- ── Sản phẩm mẫu: Cà phê ──
-INSERT INTO Food (FoodName, CategoryId, BasePrice, DiscountPercent, Stock, ImageUrl, Description) VALUES
-  ('Cà phê sữa đá',     1, 29000, 0,  100, '/images/foods/ca-phe-sua-da.jpg',     'Cà phê phin truyền thống pha với sữa đặc và đá'),
-  ('Cà phê đen đá',     1, 25000, 0,  100, '/images/foods/ca-phe-den-da.jpg',     'Cà phê đen nguyên chất, đá viên mát lạnh'),
-  ('Bạc xỉu',           1, 29000, 0,  100, '/images/foods/bac-xiu.jpg',           'Nhiều sữa, ít cà phê — vị nhẹ nhàng'),
-  ('Americano',          1, 39000, 0,  100, '/images/foods/americano.jpg',         'Espresso pha nước — thanh nhẹ kiểu Ý'),
-  ('Latte',              1, 45000, 10, 100, '/images/foods/latte.jpg',             'Espresso + sữa tươi nóng, foam mịn'),
-  ('Cappuccino',         1, 45000, 0,  100, '/images/foods/cappuccino.jpg',        'Espresso + foam sữa dày — đậm đà')
-ON DUPLICATE KEY UPDATE BasePrice = VALUES(BasePrice);
+-- ══════════════════════════════════════════════════════════════
+-- Sản phẩm — Đồng bộ với HomeScreen & AllProductsScreen
+-- (FoodId cố định để khớp với frontend)
+-- ══════════════════════════════════════════════════════════════
 
--- ── Sản phẩm mẫu: Trà sữa ──
-INSERT INTO Food (FoodName, CategoryId, BasePrice, DiscountPercent, Stock, ImageUrl, Description) VALUES
-  ('Trà sữa trân châu',       2, 35000, 0,  100, '/images/foods/tra-sua-tran-chau.jpg',       'Trà sữa truyền thống kèm trân châu đen'),
-  ('Trà sữa matcha',          2, 39000, 0,  100, '/images/foods/tra-sua-matcha.jpg',          'Matcha Nhật Bản hòa quyện sữa tươi'),
-  ('Trà sữa khoai môn',       2, 39000, 5,  100, '/images/foods/tra-sua-khoai-mon.jpg',       'Khoai môn tím béo ngậy, thơm lừng'),
-  ('Trà sữa socola',          2, 39000, 0,  100, '/images/foods/tra-sua-socola.jpg',          'Socola đậm mix sữa tươi')
-ON DUPLICATE KEY UPDATE BasePrice = VALUES(BasePrice);
-
--- ── Sản phẩm mẫu: Trà trái cây ──
-INSERT INTO Food (FoodName, CategoryId, BasePrice, DiscountPercent, Stock, ImageUrl, Description) VALUES
-  ('Trà đào cam sả',          3, 39000, 0,  100, '/images/foods/tra-dao-cam-sa.jpg',          'Trà đào thơm mát, cam tươi, sả thơm'),
-  ('Trà vải lychee',          3, 35000, 0,  100, '/images/foods/tra-vai-lychee.jpg',          'Trà xanh thanh mát vị vải tự nhiên'),
-  ('Trà chanh leo',           3, 35000, 0,  100, '/images/foods/tra-chanh-leo.jpg',           'Trà xanh chua ngọt chanh leo tươi'),
-  ('Hồng trà chanh mật ong',  3, 39000, 0,  100, '/images/foods/hong-tra-chanh-mat-ong.jpg',  'Hồng trà + chanh tươi + mật ong')
-ON DUPLICATE KEY UPDATE BasePrice = VALUES(BasePrice);
-
--- ── Sản phẩm mẫu: Sinh tố ──
-INSERT INTO Food (FoodName, CategoryId, BasePrice, DiscountPercent, Stock, ImageUrl, Description) VALUES
-  ('Sinh tố bơ',              4, 39000, 0,  100, '/images/foods/sinh-to-bo.jpg',              'Bơ sáp béo ngậy xay nhuyễn mịn'),
-  ('Sinh tố xoài',            4, 35000, 0,  100, '/images/foods/sinh-to-xoai.jpg',            'Xoài cát Hòa Lộc ngọt tự nhiên'),
-  ('Sinh tố dâu',             4, 39000, 10, 100, '/images/foods/sinh-to-dau.jpg',             'Dâu tây tươi xay cùng sữa chua')
-ON DUPLICATE KEY UPDATE BasePrice = VALUES(BasePrice);
-
--- ── Sản phẩm mẫu: Nước ép ──
-INSERT INTO Food (FoodName, CategoryId, BasePrice, DiscountPercent, Stock, ImageUrl, Description) VALUES
-  ('Nước ép cam',             5, 35000, 0,  100, '/images/foods/nuoc-ep-cam.jpg',             'Cam tươi ép nguyên chất 100%'),
-  ('Nước ép dưa hấu',        5, 29000, 0,  100, '/images/foods/nuoc-ep-dua-hau.jpg',        'Dưa hấu tươi mát giải nhiệt'),
-  ('Nước ép cà rốt',         5, 29000, 0,  100, '/images/foods/nuoc-ep-ca-rot.jpg',         'Cà rốt tươi bổ dưỡng')
-ON DUPLICATE KEY UPDATE BasePrice = VALUES(BasePrice);
+INSERT INTO Food (FoodId, FoodName, CategoryId, BasePrice, DiscountPercent, Stock, ImageUrl, Description) VALUES
+  (1,  'Nước ép rau má',        4, 120000, 0, 100, '/images/rauma.jpg',       'Rau má tươi xay lạnh cùng chút đường phèn thanh nhẹ, giúp giải nhiệt và làm dịu cơ thể trong ngày nắng.'),
+  (2,  'Trà đào cam sả',       2,  55000, 0, 100, '/images/tra_cam_xa.jpg',  'Sự kết hợp của trà đen ủ đậm, đào ngọt dịu, cam mọng nước và hương sả thơm mát, cân bằng chua ngọt.'),
+  (3,  'Trà Chanh',             2,  35000, 0, 100, '/images/tra_chanh.webp',  'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì.'),
+  (4,  'Trà Xanh',              2,  40000, 0, 100, '/images/tra_xanh.jpg',    'Trà xanh nguyên lá với hậu vị dịu và hương thơm tự nhiên, phù hợp cho người thích vị trà thuần khiết.'),
+  (5,  'Cà phê sữa đá',        1,  29000, 0, 100, '/images/CPSD.webp',       'Cà phê pha phin truyền thống thơm lừng kết hợp cùng sữa đặc béo ngậy.'),
+  (6,  'Nước Ion Kiềm Cao Cấp', 7,  25000, 0, 200, '/images/ion.png',         'Nước ion kiềm tinh lọc với vị mềm nhẹ, hỗ trợ bù khoáng và làm dịu cơ thể sau vận động.'),
+  (7,  'Soda Mix Dâu Rừng',     6,  45000, 0, 100, '/images/soda.jpg',        'Soda mát lạnh kết hợp siro dâu rừng thơm ngọt, tạo cảm giác sủi tê vui miệng và trẻ trung.'),
+  (8,  'Sữa Hạnh Nhân Organic', 5,  65000, 0,  80, '/images/sua.jpg',         'Sữa hạnh nhân nguyên chất, béo nhẹ tự nhiên, không ngấy, phù hợp cho lối sống lành mạnh.'),
+  (9,  'Nước Ép Cam Tươi',      4,  55000, 0, 100, '/images/cam.png',         'Cam tươi ép tại quầy giữ trọn vị chua ngọt tự nhiên và hương thơm mọng nước giàu vitamin C.'),
+  (10, 'Protein Shake Socola',  7,  85000, 0,  50, '/images/protein.jpeg',    'Protein shake vị socola đậm đà, tăng năng lượng nhanh, thích hợp trước hoặc sau khi tập luyện.'),
+  (11, 'Nước Ép Nhãn Lồng',    4,  60000, 0,  80, '/images/nhan.jpg',        'Nhãn lồng Hưng Yên ép tươi ngọt thanh, mát lành, bổ dưỡng.')
+ON DUPLICATE KEY UPDATE
+  FoodName = VALUES(FoodName),
+  BasePrice = VALUES(BasePrice),
+  Stock = VALUES(Stock),
+  Description = VALUES(Description),
+  ImageUrl = VALUES(ImageUrl);
 
 -- ── Voucher mẫu ──
 INSERT INTO Vouchers (Code, DiscountAmount, DiscountPercentage, MinOrderAmount, ExpiryDate) VALUES

@@ -23,7 +23,9 @@ web-build/
 # Environment variables
 .env
 .env.*
+!.env.example
 backend/.env
+!backend/.env.example
 
 # Keys and certs
 *.pem

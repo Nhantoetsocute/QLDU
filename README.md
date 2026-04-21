@@ -1,224 +1,148 @@
-# 🧃 True Juice — Ứng dụng Đặt Nước Uống
+# 🥤 QuanLyBanNuoc (QLDU)
 
-## 👥 Thành viên nhóm
-
-| STT | Họ và tên | MSSV |
-|:---:|-----------|------|
-| 1 | Nguyễn Văn Kiên | 23810310138 |
-| 2 | Đỗ Quang Hà | 23810310132 |
-| 3 | Nguyễn Bá Nhân | 23810310144 |
+Ứng dụng quản lý bán nước — React Native (Expo) + Node.js Express + MySQL.
 
 ---
 
-## 📋 Mô tả hệ thống
+## 📋 Yêu cầu hệ thống
 
-**True Juice** là ứng dụng di động đặt nước uống, được xây dựng bằng **React Native (Expo)** cho phía client và **Node.js + Express** cho phía server, kết nối cơ sở dữ liệu **MySQL 8+**.
-
-Ứng dụng cho phép người dùng duyệt menu, thêm sản phẩm vào giỏ hàng, đặt hàng giao tận nơi, thanh toán bằng tiền mặt (COD) hoặc qua cổng VNPAY, theo dõi trạng thái đơn hàng, và quản lý tài khoản cá nhân.
-
----
-
-## ✨ Tính năng chính
-
-- 🔐 **Đăng nhập / Đăng ký** — Xác thực người dùng qua email, hỗ trợ quên mật khẩu (OTP).
-- 🏠 **Trang chủ** — Banner quảng cáo dạng slider, danh mục sản phẩm, sản phẩm nổi bật.
-- 📋 **Menu** — Duyệt toàn bộ sản phẩm theo danh mục (Cà phê, Trà trái cây, Sinh tố, …).
-- 🔍 **Chi tiết sản phẩm** — Xem mô tả, chọn Size (S/M/L), Topping, thêm vào giỏ hàng.
-- 🛒 **Giỏ hàng** — Quản lý số lượng, xóa sản phẩm, tính tổng tiền tự động.
-- 📦 **Đặt hàng & Thanh toán** — Nhập thông tin giao hàng, chọn COD hoặc VNPAY, áp dụng voucher giảm giá.
-- 📜 **Lịch sử đơn hàng** — Theo dõi trạng thái (Đang chuẩn bị → Đang giao → Hoàn thành).
-- 🗺️ **Cửa hàng** — Xem vị trí các chi nhánh trên bản đồ (Google Maps).
-- 🎫 **Ưu đãi** — Danh sách voucher và chương trình khuyến mãi.
-- 👤 **Hồ sơ cá nhân** — Cập nhật tên, email, số điện thoại, địa chỉ, ảnh đại diện.
-- 🔔 **Thông báo** — Nhận thông báo đơn hàng và khuyến mãi.
-- 🌙 **Dark Mode** — Hỗ trợ giao diện tối/sáng.
-- 🌐 **Đa ngôn ngữ** — Hỗ trợ chuyển đổi ngôn ngữ.
+| Công cụ        | Phiên bản       | Ghi chú                        |
+| -------------- | --------------- | ------------------------------ |
+| **Node.js**    | ≥ 18            | [nodejs.org](https://nodejs.org) |
+| **MySQL**      | ≥ 8.0           | Có sẵn trong XAMPP             |
+| **XAMPP**      | Bất kì          | Bật Apache + MySQL             |
+| **Expo CLI**   | Cài qua npx     | Không cần cài global           |
+| **Expo Go**    | App trên điện thoại | Tải từ App Store / Google Play |
 
 ---
 
-## 🏗️ Kiến trúc hệ thống
+## 🚀 Hướng dẫn cài đặt (3 bước)
 
-```
-┌─────────────────────────────────────────────────┐
-│              Mobile App (React Native)          │
-│  Expo · React Navigation · Context API          │
-└──────────────────────┬──────────────────────────┘
-                       │  REST API (HTTP)
-┌──────────────────────▼──────────────────────────┐
-│              Backend (Node.js + Express)         │
-│  Controllers · Routes · Middleware               │
-└──────────────────────┬──────────────────────────┘
-                       │  mysql2
-┌──────────────────────▼──────────────────────────┐
-│              Database (MySQL 8+)                 │
-│  QuanLyBanNuoc                                   │
-└─────────────────────────────────────────────────┘
-```
+### Bước 1: Tạo Database
 
----
+1. Mở **XAMPP** → Start **MySQL**
+2. Mở **phpMyAdmin** (http://localhost/phpmyadmin)
+3. Vào tab **Import** → chọn file `database/QuanLyBanNuoc.sql` → nhấn **Go**
+   
+   Hoặc dùng CLI:
+   ```bash
+   cd backend
+   npm install
+   npm run reset-db
+   ```
 
-## 🛠️ Công nghệ sử dụng
+> File SQL sẽ tự động tạo database `quanlybannuoc`, tất cả bảng, và dữ liệu mẫu (sản phẩm, voucher, bàn...).
 
-### Frontend (Mobile)
-| Công nghệ | Phiên bản |
-|------------|-----------|
-| React Native | 0.81.5 |
-| Expo | 54.x |
-| React Navigation | 7.x |
-| AsyncStorage | 2.2.0 |
-| Expo Image Picker | 17.x |
-| React Native Maps | 1.20.1 |
-| React Native WebView | 13.15.0 |
-
-### Backend
-| Công nghệ | Mô tả |
-|------------|-------|
-| Node.js | Runtime |
-| Express.js | Web framework |
-| mysql2 | MySQL driver |
-| JWT | Xác thực token |
-| bcrypt | Mã hóa mật khẩu |
-
-### Database
-| Công nghệ | Mô tả |
-|------------|-------|
-| MySQL 8+ | Hệ quản trị CSDL quan hệ |
-| utf8mb4 | Hỗ trợ tiếng Việt & emoji |
-
----
-
-## 📁 Cấu trúc thư mục
-
-```
-QLDU/
-├── App.js                  # Entry point, cấu hình Navigation
-├── package.json            # Dependencies frontend
-├── metro.config.js         # Cấu hình Metro bundler
-│
-├── src/
-│   ├── screens/            # 20 màn hình giao diện
-│   │   ├── HomeScreen.js
-│   │   ├── LoginScreen.js
-│   │   ├── SignUpScreen.js
-│   │   ├── MenuScreen.js
-│   │   ├── CartScreen.js
-│   │   ├── CheckoutScreen.js
-│   │   ├── ProductDetailScreen.js
-│   │   ├── OrderHistoryScreen.js
-│   │   ├── StoreScreen.js
-│   │   ├── ProfileScreen.js
-│   │   └── ...
-│   ├── components/         # Component tái sử dụng
-│   ├── context/            # Context API (Cart, UserProfile)
-│   ├── config/             # Cấu hình API URL
-│   ├── navigation/         # Cấu hình điều hướng
-│   ├── theme/              # Dark/Light mode
-│   └── mocks/              # Dữ liệu mẫu
-│
-├── backend/
-│   ├── server.js           # Express server entry
-│   ├── .env                # Biến môi trường (DB config)
-│   ├── seed_food.js        # Script seed dữ liệu sản phẩm
-│   ├── src/
-│   │   ├── config/         # Kết nối database
-│   │   ├── controllers/    # Xử lý logic nghiệp vụ
-│   │   ├── routes/         # Định tuyến API
-│   │   └── middleware/     # Xác thực, phân quyền
-│   └── tests/              # Test API
-│
-├── database/
-│   └── QuanLyBanNuoc.sql   # Script tạo CSDL (15 bảng)
-│
-└── assets/
-    └── images/             # Hình ảnh sản phẩm & banner
-```
-
----
-
-## 🗄️ Cơ sở dữ liệu
-
-Database **QuanLyBanNuoc** gồm **15 bảng** chính:
-
-| Nhóm | Bảng | Mô tả |
-|------|------|-------|
-| Người dùng | `Users` | Thông tin tài khoản, OTP |
-| | `DeliveryAddresses` | Địa chỉ giao hàng đã lưu |
-| Sản phẩm | `Category` | Danh mục (Cà phê, Trà, Sinh tố) |
-| | `Food` | Sản phẩm (tên, giá, giảm giá, hình ảnh) |
-| | `Size` | Kích cỡ (S, M, L) |
-| | `Topping` | Topping bổ sung |
-| Kho | `Ingredient` | Nguyên liệu |
-| | `FoodIngredient` | Công thức (món ↔ nguyên liệu) |
-| | `Warehouse` | Tồn kho nguyên liệu |
-| Giỏ hàng | `GioHang` | Giỏ hàng của user |
-| | `GioHang_Topping` | Topping trong giỏ hàng |
-| Đơn hàng | `Orders` | Đơn hàng |
-| | `OrderDetails` | Chi tiết đơn hàng |
-| | `OrderDetail_Toppings` | Topping trong đơn hàng |
-| Thanh toán | `PhuongThucThanhToan` | Phương thức (COD, VNPAY) |
-| | `OrderStatus` | Trạng thái đơn hàng |
-| | `Vouchers` | Mã giảm giá |
-| Tại quán | `TableFood` | Quản lý bàn |
-| | `Invoice` / `InvoiceDetail` | Hóa đơn tại quán |
-
----
-
-## 🚀 Hướng dẫn cài đặt & chạy
-
-### Yêu cầu
-
-- **Node.js** >= 18
-- **MySQL** >= 8.0
-- **Expo CLI** — `npm install -g expo-cli`
-- **Expo Go** app trên điện thoại (Android/iOS)
-
-### 1. Clone dự án
-
-```bash
-git clone https://github.com/Nhantoetsocute/QLDU.git
-cd QLDU
-```
-
-### 2. Tạo Database
-
-```bash
-mysql -u root -p < database/QuanLyBanNuoc.sql
-```
-
-### 3. Cấu hình Backend
+### Bước 2: Chạy Backend
 
 ```bash
 cd backend
+
+# Copy file env mẫu
+cp .env.example .env
+# (Trên Windows: copy .env.example .env)
+
+# Cài dependencies
 npm install
-```
 
-Tạo file `.env`:
-
-```env
-DB_HOST=localhost
-DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=QuanLyBanNuoc
-```
-
-### 4. Chạy Backend
-
-```bash
-node server.js
-```
-
-### 5. Cài đặt & chạy Frontend
-
-```bash
-cd ..
-npm install
+# Chạy server
 npm start
 ```
 
-Quét mã QR bằng **Expo Go** trên điện thoại để mở ứng dụng.
+Backend sẽ chạy tại `http://localhost:3000`. Kiểm tra: http://localhost:3000/api/health
+
+### Bước 3: Chạy Frontend (App Mobile)
+
+```bash
+# Ở thư mục gốc project
+npm install
+
+npm start
+```
+
+Scan QR code bằng app **Expo Go** trên điện thoại (cùng mạng WiFi với máy tính).
 
 ---
 
-## 📄 License
+## 📁 Cấu trúc dự án
 
-Dự án phục vụ mục đích học tập.
+```
+QLDU/
+├── App.js                    # Entry point — Navigation
+├── assets/images/            # Ảnh local (banner, sản phẩm)
+├── src/
+│   ├── config/api.js         # Auto-detect API URL
+│   ├── context/              # React Context (User, Cart)
+│   ├── navigation/           # Bottom Tab Navigator
+│   ├── screens/              # Tất cả màn hình
+│   └── theme/                # Dark/Light theme
+├── backend/
+│   ├── .env.example          # ← Template cấu hình
+│   ├── server.js             # Express entry point
+│   ├── reset-db.js           # Reset & import database
+│   ├── seed_food.js          # Seed sản phẩm
+│   ├── public/images/        # Ảnh sản phẩm (serve static)
+│   └── src/
+│       ├── config/db.js      # MySQL connection pool
+│       ├── middleware/        # JWT auth
+│       ├── controllers/      # Business logic
+│       └── routes/           # API endpoints
+└── database/
+    └── QuanLyBanNuoc.sql     # Full database schema + seed
+```
+
+---
+
+## 🔌 API Endpoints
+
+| Method | Endpoint                        | Auth | Mô tả                    |
+| ------ | ------------------------------- | ---- | ------------------------- |
+| POST   | `/api/auth/register`            | ❌   | Đăng ký                  |
+| POST   | `/api/auth/login`               | ❌   | Đăng nhập                |
+| GET    | `/api/user/profile`             | ✅   | Lấy thông tin user       |
+| PUT    | `/api/user/profile`             | ✅   | Cập nhật profile         |
+| GET    | `/api/food`                     | ❌   | Danh sách sản phẩm       |
+| GET    | `/api/categories`               | ❌   | Danh mục                 |
+| GET    | `/api/vouchers`                 | ❌   | Danh sách voucher        |
+| GET    | `/api/cart`                     | ✅   | Xem giỏ hàng             |
+| POST   | `/api/cart`                     | ✅   | Thêm vào giỏ             |
+| POST   | `/api/orders`                   | ✅   | Tạo đơn hàng (COD)       |
+| GET    | `/api/orders`                   | ✅   | Lịch sử đơn hàng         |
+| PUT    | `/api/orders/:id/cancel`        | ✅   | Hủy đơn hàng             |
+| POST   | `/api/vnpay/create-payment-url` | ✅   | Tạo link thanh toán VNPay |
+
+---
+
+## ⚙️ Biến môi trường (Backend)
+
+Xem file `backend/.env.example` để biết tất cả biến cần thiết.
+
+| Biến              | Mô tả                                  |
+| ----------------- | --------------------------------------- |
+| `PORT`            | Port server (mặc định: 3000)           |
+| `DB_HOST`         | MySQL host (mặc định: 127.0.0.1)      |
+| `DB_USER`         | MySQL username (mặc định: root)        |
+| `DB_PASSWORD`     | MySQL password (mặc định: rỗng)        |
+| `DB_NAME`         | Tên database                            |
+| `JWT_SECRET`      | Secret key cho JWT token               |
+| `VNP_TMN_CODE`    | Mã TMN từ VNPay Sandbox               |
+| `VNP_HASH_SECRET` | Hash secret từ VNPay Sandbox           |
+| `VNP_HOST`        | VNPay gateway URL                      |
+| `VNP_TEST_MODE`   | `true` = sandbox, `false` = production |
+
+---
+
+## 🛠 Scripts Backend
+
+```bash
+npm start        # Chạy server
+npm run reset-db # Xóa + tạo lại database từ file SQL
+npm run seed     # Seed dữ liệu sản phẩm
+npm run setup    # reset-db + seed (chạy 1 lần khi mới clone)
+```
+
+---
+
+## 👥 Tác giả
+
+- **Nguyễn Văn Kiên** — 23810310138
