@@ -17,6 +17,8 @@ import {
 import { Ionicons, MaterialCommunityIcons, FontAwesome5 } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
+import { apiUrl } from '../config/api';
+import { Alert } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
 
@@ -114,6 +116,70 @@ const ForgotPasswordScreen = ({ navigation }) => {
     setTimeout(() => setStep(nextStep), 200);
   };
 
+  const handleRequestOTP = async () => {
+    if (!email) {
+      Alert.alert('Lỗi', 'Vui lòng nhập email');
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl('/api/auth/forgot-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+      Alert.alert('Thành công', data.message);
+      animateStepChange(2);
+    } catch (error) {
+      Alert.alert('Lỗi', error.message);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otp || otp.length !== 6) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đủ 6 số OTP');
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl('/api/auth/verify-otp'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'OTP không hợp lệ');
+      animateStepChange(3);
+    } catch (error) {
+      Alert.alert('Lỗi', error.message);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert('Lỗi', 'Mật khẩu xác nhận không trùng khớp');
+      return;
+    }
+    try {
+      const res = await fetch(apiUrl('/api/auth/reset-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, otp, newPassword })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+      Alert.alert('Thành công', 'Khôi phục mật khẩu thành công!', [
+        { text: 'Đăng nhập', onPress: () => navigation?.navigate('Login') }
+      ]);
+    } catch (error) {
+      Alert.alert('Lỗi', error.message);
+    }
+  };
+
   const handleBack = () => {
     if (step > 1) {
       animateStepChange(step - 1);
@@ -170,7 +236,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     />
                   </View>
 
-                  <TouchableOpacity style={styles.mainButton} onPress={() => animateStepChange(2)}>
+                  <TouchableOpacity style={styles.mainButton} onPress={handleRequestOTP}>
                     <Text style={styles.mainButtonText}>GỬI MÃ XÁC THỰC</Text>
                   </TouchableOpacity>
                 </View>
@@ -198,7 +264,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     />
                   </View>
 
-                  <TouchableOpacity style={styles.mainButton} onPress={() => animateStepChange(3)}>
+                  <TouchableOpacity style={styles.mainButton} onPress={handleVerifyOTP}>
                     <Text style={styles.mainButtonText}>TIẾP TỤC</Text>
                   </TouchableOpacity>
                 </View>
@@ -242,7 +308,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity style={styles.mainButton} onPress={() => navigation?.navigate('Login')}>
+                  <TouchableOpacity style={styles.mainButton} onPress={handleResetPassword}>
                     <Text style={styles.mainButtonText}>HOÀN TẤT ĐỔI MẬT KHẨU</Text>
                   </TouchableOpacity>
                 </View>

@@ -150,3 +150,122 @@ exports.getProfile = async (req, res) => {
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };
+
+const emailService = require('../services/emailService');
+
+// 4. Quên mật khẩu - Tạo OTP và gửi email
+exports.forgotPassword = async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Vui lòng nhập email" });
+
+    try {
+        const emailLower = email.trim().toLowerCase();
+        const [users] = await pool.execute("SELECT UserId, UserName FROM Users WHERE Email = ? LIMIT 1", [emailLower]);
+        
+        if (users.length === 0) {
+            return res.status(404).json({ error: "Email không tồn tại trong hệ thống" });
+        }
+
+        const user = users[0];
+        
+        // Tạo mã OTP 6 số
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        // Hết hạn sau 10 phút
+        const expiryDate = new Date(Date.now() + 10 * 60000); 
+
+        // Lưu OTP vào database
+        await pool.execute(
+            "UPDATE Users SET OTPCode = ?, OTPExpiry = ? WHERE UserId = ?",
+            [otpCode, expiryDate, user.UserId]
+        );
+
+        // Gửi email
+        const emailSent = await emailService.sendOTP(emailLower, otpCode);
+        
+        if (!emailSent) {
+            return res.status(500).json({ error: "Lỗi máy chủ gửi email. Vui lòng thử lại sau." });
+        }
+
+        res.json({ message: "Mã OTP đã được gửi vào email của bạn." });
+    } catch (error) {
+        console.error('forgotPassword error:', error.message);
+        res.status(500).json({ error: "Lỗi máy chủ" });
+    }
+};
+
+// 5. Xác thực OTP
+exports.verifyOTP = async (req, res) => {
+    const { email, otp } = req.body;
+    if (!email || !otp) return res.status(400).json({ error: "Thiếu thông tin xác thực" });
+
+    try {
+        const emailLower = email.trim().toLowerCase();
+        const [users] = await pool.execute(
+            "SELECT UserId, OTPCode, OTPExpiry FROM Users WHERE Email = ? LIMIT 1",
+            [emailLower]
+        );
+
+        if (users.length === 0) {
+            return res.status(404).json({ error: "Tài khoản không tồn tại" });
+        }
+
+        const user = users[0];
+
+        if (!user.OTPCode || user.OTPCode !== otp) {
+            return res.status(400).json({ error: "Mã OTP không chính xác" });
+        }
+
+        if (new Date() > new Date(user.OTPExpiry)) {
+            return res.status(400).json({ error: "Mã OTP đã hết hạn" });
+        }
+
+        // Token hợp lệ, frontend có thể chuyển sang bước đổi mật khẩu
+        res.json({ message: "Xác thực OTP thành công", validated: true });
+    } catch (error) {
+        console.error('verifyOTP error:', error.message);
+        res.status(500).json({ error: "Lỗi máy chủ" });
+    }
+};
+
+// 6. Đặt lại Mật Khẩu Mới
+exports.resetPassword = async (req, res) => {
+    const { email, otp, newPassword } = req.body;
+    if (!email || !otp || !newPassword) {
+        return res.status(400).json({ error: "Thiếu thông tin thiết lập mật khẩu" });
+    }
+
+    if (newPassword.length < 6) {
+        return res.status(400).json({ error: "Mật khẩu phải có ít nhất 6 ký tự" });
+    }
+
+    try {
+        const emailLower = email.trim().toLowerCase();
+        // Cùng kiểm tra lại vòng bảo vệ OTP tránh gọi API thẳng
+        const [users] = await pool.execute(
+            "SELECT UserId, OTPCode, OTPExpiry FROM Users WHERE Email = ? LIMIT 1",
+            [emailLower]
+        );
+
+        if (users.length === 0) return res.status(404).json({ error: "Tài khoản không tồn tại" });
+        const user = users[0];
+
+        if (!user.OTPCode || user.OTPCode !== otp) {
+            return res.status(400).json({ error: "Phiên khôi phục không hợp lệ hoặc đã hết hạn" });
+        }
+
+        // Hash mật khẩu mới
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+        // Cập nhật Database, xóa OTP
+        await pool.execute(
+            "UPDATE Users SET PasswordHash = ?, OTPCode = NULL, OTPExpiry = NULL WHERE UserId = ?",
+            [hashedPassword, user.UserId]
+        );
+
+        res.json({ message: "Đặt lại mật khẩu thành công!" });
+    } catch (error) {
+        console.error('resetPassword error:', error.message);
+        res.status(500).json({ error: "Lỗi máy chủ" });
+    }
+};
+
