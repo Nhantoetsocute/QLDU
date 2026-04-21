@@ -265,6 +265,8 @@ const StoreScreen = ({ navigation, route }) => {
         {
           text: 'Thanh toán VNPAY',
           onPress: () => {
+            setModalVisible(false); // Ẩn Modal đi trước khi chuyển trang
+            
             const now = new Date();
             const hh = String(now.getHours()).padStart(2, '0');
             const mm = String(now.getMinutes()).padStart(2, '0');

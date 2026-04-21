@@ -37,12 +37,13 @@ const VNPayScreen = ({ route, navigation }) => {
           body: JSON.stringify({
             amount,
             orderInfo,
-            receiverName,
-            receiverPhone,
-            deliveryAddress,
+            receiverName: receiverName || 'Khách đặt bàn',
+            receiverPhone: receiverPhone || 'N/A',
+            deliveryAddress: deliveryAddress || 'Tại cửa hàng',
             note,
             voucherId,
             cartItems: cartItemsParam,
+            type: route.params?.reservationData ? 'reservation' : 'order',
           }),
         });
 
@@ -87,17 +88,30 @@ const VNPayScreen = ({ route, navigation }) => {
 
     const responseCode = getQueryParam(url, 'vnp_ResponseCode');
     if (responseCode === '00') {
-      // Thanh toán thành công → xoá giỏ hàng + navigate về danh sách đơn hàng (refresh từ DB)
-      clearCart();
-      Alert.alert(' Thành công', 'Thanh toán VNPAY thành công!', [
-        {
-          text: 'Xem đơn hàng',
-          onPress: () => navigation.navigate('MainTabs', {
-            screen: 'Đặt Hàng',
-            params: { refresh: Date.now() },
-          }),
-        },
-      ]);
+      const reservationData = route.params?.reservationData;
+      if (reservationData) {
+        Alert.alert('Thành công', 'Đặt cọc bàn thành công!', [
+          {
+            text: 'Quay lại Cửa hàng',
+            onPress: () => navigation.navigate('MainTabs', {
+              screen: 'Cửa Hàng',
+              params: { reservationResult: reservationData },
+            }),
+          },
+        ]);
+      } else {
+        // Thanh toán thành công → xoá giỏ hàng + navigate về danh sách đơn hàng (refresh từ DB)
+        clearCart();
+        Alert.alert(' Thành công', 'Thanh toán VNPAY thành công!', [
+          {
+            text: 'Xem đơn hàng',
+            onPress: () => navigation.navigate('MainTabs', {
+              screen: 'Đặt Hàng',
+              params: { refresh: Date.now() },
+            }),
+          },
+        ]);
+      }
     } else {
       Alert.alert('Thất bại', 'Giao dịch bị huỷ hoặc có lỗi xảy ra.');
       navigation.goBack();

@@ -7,8 +7,8 @@ const pool = require('../config/db');
 const vnpay = new VNPay({
     tmnCode: process.env.VNP_TMN_CODE,
     secureSecret: process.env.VNP_HASH_SECRET,
-    vnpayHost: 'https://sandbox.vnpayment.vn',
-    testMode: true,
+    vnpayHost: process.env.VNP_HOST || 'https://sandbox.vnpayment.vn',
+    testMode: process.env.VNP_TEST_MODE !== 'false',
     hashAlgorithm: 'SHA512',
     enableLog: false,
 });
@@ -33,104 +33,122 @@ exports.createPaymentUrl = async (req, res) => {
     // DEBUG
     console.log('=== VNPay req.body ===', JSON.stringify(req.body, null, 2));
 
-    // Validate
-    if (!amount || amount <= 0) {
-        return res.status(400).json({ message: 'So tien khong hop le' });
-    }
-    if (!receiverName || !receiverPhone || !deliveryAddress) {
-        return res.status(400).json({ message: 'Vui long nhap day du thong tin giao hang' });
-    }
-    if (!clientCartItems || !Array.isArray(clientCartItems) || clientCartItems.length === 0) {
-        return res.status(400).json({ message: 'Gio hang trong' });
-    }
-
     const connection = await pool.getConnection();
 
     try {
         await connection.beginTransaction();
 
-        // -- Verify gia + stock tu DB cho tung item trong gio hang --
-        const cartItems = [];
-        for (const ci of clientCartItems) {
-            const foodId = ci.productId || ci.id;
-            const quantity = ci.quantity || 1;
-            if (!foodId || quantity < 1) continue;
+        let totalAmount = 0;
+        let orderCode = '';
+        let orderId = null;
 
-            const [foods] = await connection.execute(
-                `SELECT FoodId, FoodName, BasePrice, Stock FROM Food WHERE FoodId = ? AND IsActive = 1`,
-                [foodId]
+        if (req.body.type === 'reservation') {
+            totalAmount = amount;
+            const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            orderCode = `RES${dateStr}${randomSuffix}`;
+
+            const [orderResult] = await connection.execute(
+                `INSERT INTO Orders (OrderCode, UserId, TotalAmount, PaymentMethodId, StatusId, ReceiverName, ReceiverPhone, DeliveryAddress, Note) 
+                 VALUES (?, ?, ?, 2, 1, ?, ?, ?, ?)`,
+                [orderCode, userId, totalAmount, receiverName || 'Khách đặt bàn', receiverPhone || 'N/A', deliveryAddress || 'Tại cửa hàng', note || orderInfo || '']
             );
-            if (foods.length === 0) continue;
+            orderId = orderResult.insertId;
+        } else {
+            // Validate
+            if (!amount || amount <= 0) {
+                return res.status(400).json({ message: 'So tien khong hop le' });
+            }
+            if (!receiverName || !receiverPhone || !deliveryAddress) {
+                return res.status(400).json({ message: 'Vui long nhap day du thong tin giao hang' });
+            }
+            if (!clientCartItems || !Array.isArray(clientCartItems) || clientCartItems.length === 0) {
+                return res.status(400).json({ message: 'Gio hang trong' });
+            }
 
-            const food = foods[0];
-            if (food.Stock < quantity) {
-                await connection.rollback();
-                return res.status(400).json({
-                    message: `"${food.FoodName}" chi con ${food.Stock} san pham, ban dat ${quantity}`
+        // -- Verify gia + stock tu DB cho tung item trong gio hang --
+            const cartItems = [];
+            for (const ci of clientCartItems) {
+                const foodId = ci.productId || ci.id;
+                const quantity = ci.quantity || 1;
+                if (!foodId || quantity < 1) continue;
+
+                const [foods] = await connection.execute(
+                    `SELECT FoodId, FoodName, BasePrice, Stock FROM Food WHERE FoodId = ? AND IsActive = 1`,
+                    [foodId]
+                );
+                if (foods.length === 0) continue;
+
+                const food = foods[0];
+                if (food.Stock < quantity) {
+                    await connection.rollback();
+                    return res.status(400).json({
+                        message: `"${food.FoodName}" chi con ${food.Stock} san pham, ban dat ${quantity}`
+                    });
+                }
+
+                cartItems.push({
+                    FoodId: food.FoodId,
+                    FoodName: food.FoodName,
+                    BasePrice: food.BasePrice,
+                    Quantity: quantity,
                 });
             }
 
-            cartItems.push({
-                FoodId: food.FoodId,
-                FoodName: food.FoodName,
-                BasePrice: food.BasePrice,
-                Quantity: quantity,
-            });
-        }
+            if (cartItems.length === 0) {
+                await connection.rollback();
+                return res.status(400).json({ message: 'Khong co san pham hop le trong gio hang' });
+            }
 
-        if (cartItems.length === 0) {
-            await connection.rollback();
-            return res.status(400).json({ message: 'Khong co san pham hop le trong gio hang' });
-        }
+            // -- Tinh tong tien --
+            totalAmount = cartItems.reduce((sum, item) => sum + (item.Quantity * item.BasePrice), 0);
 
-        // -- Tinh tong tien --
-        let totalAmount = cartItems.reduce((sum, item) => sum + (item.Quantity * item.BasePrice), 0);
-
-        // Ap dung voucher neu co
-        if (voucherId) {
-            const [vouchers] = await connection.execute(
-                "SELECT DiscountAmount, DiscountPercentage, MinOrderAmount FROM Vouchers WHERE VoucherId = ? AND IsActive = 1 AND ExpiryDate > NOW()",
-                [voucherId]
-            );
-            if (vouchers.length > 0) {
-                const v = vouchers[0];
-                if (totalAmount >= v.MinOrderAmount) {
-                    const discountVal = v.DiscountAmount > 0
-                        ? v.DiscountAmount
-                        : Math.round(totalAmount * v.DiscountPercentage / 100);
-                    totalAmount = Math.max(0, totalAmount - discountVal);
+            // Ap dung voucher neu co
+            if (voucherId) {
+                const [vouchers] = await connection.execute(
+                    "SELECT DiscountAmount, DiscountPercentage, MinOrderAmount FROM Vouchers WHERE VoucherId = ? AND IsActive = 1 AND ExpiryDate > NOW()",
+                    [voucherId]
+                );
+                if (vouchers.length > 0) {
+                    const v = vouchers[0];
+                    if (totalAmount >= v.MinOrderAmount) {
+                        const discountVal = v.DiscountAmount > 0
+                            ? v.DiscountAmount
+                            : Math.round(totalAmount * v.DiscountPercentage / 100);
+                        totalAmount = Math.max(0, totalAmount - discountVal);
+                    }
                 }
             }
-        }
 
-        // -- Sinh OrderCode --
-        const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
-        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-        const orderCode = `ORD${dateStr}${randomSuffix}`;
+            // -- Sinh OrderCode --
+            const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
+            const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+            orderCode = `ORD${dateStr}${randomSuffix}`;
 
-        // -- Insert don hang (PaymentMethodId = 2 = VNPAY, StatusId = 1 = preparing) --
-        const [orderResult] = await connection.execute(
-            `INSERT INTO Orders (OrderCode, UserId, TotalAmount, PaymentMethodId, StatusId, VoucherId, ReceiverName, ReceiverPhone, DeliveryAddress, Note) 
-             VALUES (?, ?, ?, 2, 1, ?, ?, ?, ?, ?)`,
-            [orderCode, userId, totalAmount, voucherId || null,
-                receiverName.trim(), receiverPhone.trim(), deliveryAddress.trim(), note || '']
-        );
-        const orderId = orderResult.insertId;
-
-        // -- Insert chi tiet don hang --
-        for (const item of cartItems) {
-            await connection.execute(
-                `INSERT INTO OrderDetails (OrderId, FoodId, Quantity, UnitPrice, LineTotal) VALUES (?, ?, ?, ?, ?)`,
-                [orderId, item.FoodId, item.Quantity, item.BasePrice, item.Quantity * item.BasePrice]
+            // -- Insert don hang (PaymentMethodId = 2 = VNPAY, StatusId = 1 = preparing) --
+            const [orderResult] = await connection.execute(
+                `INSERT INTO Orders (OrderCode, UserId, TotalAmount, PaymentMethodId, StatusId, VoucherId, ReceiverName, ReceiverPhone, DeliveryAddress, Note) 
+                 VALUES (?, ?, ?, 2, 1, ?, ?, ?, ?, ?)`,
+                [orderCode, userId, totalAmount, voucherId || null,
+                    receiverName.trim(), receiverPhone.trim(), deliveryAddress.trim(), note || '']
             );
-        }
+            orderId = orderResult.insertId;
 
-        // -- Update stock --
-        for (const item of cartItems) {
-            await connection.execute(
-                `UPDATE Food SET Stock = GREATEST(0, Stock - ?) WHERE FoodId = ?`,
-                [item.Quantity, item.FoodId]
-            );
+            // -- Insert chi tiet don hang --
+            for (const item of cartItems) {
+                await connection.execute(
+                    `INSERT INTO OrderDetails (OrderId, FoodId, Quantity, UnitPrice, LineTotal) VALUES (?, ?, ?, ?, ?)`,
+                    [orderId, item.FoodId, item.Quantity, item.BasePrice, item.Quantity * item.BasePrice]
+                );
+            }
+
+            // -- Update stock --
+            for (const item of cartItems) {
+                await connection.execute(
+                    `UPDATE Food SET Stock = GREATEST(0, Stock - ?) WHERE FoodId = ?`,
+                    [item.Quantity, item.FoodId]
+                );
+            }
         }
 
         await connection.commit();

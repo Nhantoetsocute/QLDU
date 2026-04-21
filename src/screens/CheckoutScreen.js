@@ -127,6 +127,13 @@ const CheckoutScreen = ({ navigation }) => {
           deliveryAddress: deliveryAddress.trim(),
           note: note.trim(),
           voucherId: null,
+          items: cartItems.map(item => ({
+            productId: item.productId || item.id,
+            id: item.id,
+            quantity: item.quantity,
+            name: item.name,
+            price: item.price,
+          })),
         }),
       });
 
