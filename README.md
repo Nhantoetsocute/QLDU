@@ -1,7 +1,13 @@
 # 🥤 QuanLyBanNuoc (QLDU)
 
 Ứng dụng quản lý bán nước — React Native (Expo) + Node.js Express + MySQL.
+## 👥 Thành viên nhóm
 
+| STT | Họ và tên | MSSV |
+|:---:|-----------|------|
+| 1 | Nguyễn Văn Kiên | 23810310138 |
+| 2 | Đỗ Quang Hà | 23810310132 |
+| 3 | Nguyễn Bá Nhân | 23810310144 |
 ---
 
 ## 📋 Yêu cầu hệ thống
@@ -143,6 +149,3 @@ npm run setup    # reset-db + seed (chạy 1 lần khi mới clone)
 
 ---
 
-## 👥 Tác giả
-
-- **Nguyễn Văn Kiên** — 23810310138
