@@ -8,5 +8,6 @@ router.use(verifyToken);
 router.get('/', orderController.getOrderHistory);
 router.post('/', orderController.createOrder);
 router.get('/:id', orderController.getOrderById);
+router.put('/:id/cancel', orderController.cancelOrder);
 
 module.exports = router;

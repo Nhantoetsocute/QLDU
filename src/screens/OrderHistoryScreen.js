@@ -137,11 +137,12 @@ const OrderHistoryScreen = ({ navigation, route }) => {
     const openTracking = () => {
       navigation.navigate('OrderTracking', {
         orderId: item.id,
+        orderDbId: item._id,
         status: item.status,
         type: item.type,
         total: item.total,
         payment: item.payment,
-        mainItem: item.mainItem,
+        mainItem: item.allItems || item.mainItem,
       });
     };
 
@@ -175,8 +176,12 @@ const OrderHistoryScreen = ({ navigation, route }) => {
           )}
           <View style={styles.orderInfo}>
             <View style={styles.titleRow}>
-               <Text style={[styles.mainItemName, { color: ui.textPrimary }]} numberOfLines={1}>{item.mainItem}</Text>
-               <Text style={[styles.itemCount, { color: ui.textMuted }]}>({item.itemCount} món)</Text>
+               <Text style={[styles.mainItemName, { color: ui.textPrimary, flex: 1, paddingRight: 5 }]} numberOfLines={2}>
+                 {item.allItems || item.mainItem}
+               </Text>
+               <Text style={[styles.itemCount, { color: ui.textMuted, alignSelf: 'flex-start', marginTop: 2 }]}>
+                 ({item.itemCount} món)
+               </Text>
             </View>
             <Text style={[styles.orderDate, { color: ui.textMuted }]}>{item.date}</Text>
             <Text style={[styles.orderSubInfo, { color: ui.textSecondary }]} numberOfLines={1}>
@@ -431,7 +436,7 @@ const styles = StyleSheet.create({
   },
   titleRow: {
       flexDirection: 'row',
-      alignItems: 'baseline',
+      alignItems: 'flex-start',
       marginBottom: 4,
   },
   mainItemName: {

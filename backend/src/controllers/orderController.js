@@ -13,7 +13,11 @@ exports.getOrderHistory = async (req, res) => {
                 CONCAT(FORMAT(o.TotalAmount, 0), ' đ') as total,
                 p.TenPhuongThuc as payment,
                 o.DeliveryAddress as address,
-                COUNT(od.OrderDetailId) as itemCount,
+                IFNULL(SUM(od.Quantity), 0) as itemCount,
+                (SELECT GROUP_CONCAT(CONCAT(f2.FoodName, ' (x', od2.Quantity, ')') SEPARATOR ', ')
+                 FROM OrderDetails od2 
+                 JOIN Food f2 ON od2.FoodId = f2.FoodId 
+                 WHERE od2.OrderId = o.OrderId) as allItems,
                 (SELECT f2.FoodName FROM OrderDetails od2 
                  JOIN Food f2 ON od2.FoodId = f2.FoodId 
                  WHERE od2.OrderId = o.OrderId 
@@ -54,9 +58,9 @@ exports.getOrderHistory = async (req, res) => {
     }
 };
 
-// Tạo đơn hàng — Tối ưu: batch insert + voucher discount
+// Tạo đơn hàng — Hỗ trợ cả giỏ hàng từ DB (GioHang) và từ frontend (items trong body)
 exports.createOrder = async (req, res) => {
-    const { paymentMethodId, receiverName, receiverPhone, deliveryAddress, note, voucherId } = req.body;
+    const { paymentMethodId, receiverName, receiverPhone, deliveryAddress, note, voucherId, items } = req.body;
     const userId = req.user.userId;
 
     // Validate thông tin bắt buộc
@@ -69,13 +73,50 @@ exports.createOrder = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // 1. Lấy giỏ hàng + kiểm tra stock cùng lúc
-        const [cartItems] = await connection.execute(`
-            SELECT g.FoodId, g.Quantity, f.BasePrice, f.Stock, f.FoodName
-            FROM GioHang g 
-            JOIN Food f ON g.FoodId = f.FoodId 
-            WHERE g.UserId = ?
-        `, [userId]);
+        let cartItems = [];
+        let usingFrontendCart = false;
+
+        // Nếu frontend gửi items trực tiếp (từ CartContext/AsyncStorage hoặc mua ngay)
+        if (items && Array.isArray(items) && items.length > 0) {
+            usingFrontendCart = true;
+            // Lấy thông tin sản phẩm từ DB để validate giá và stock
+            const foodIds = items.map(i => i.productId || i.id);
+            const placeholders = foodIds.map(() => '?').join(',');
+            const [foods] = await connection.execute(
+                `SELECT FoodId, FoodName, BasePrice, Stock FROM Food WHERE FoodId IN (${placeholders})`,
+                foodIds
+            );
+
+            const foodMap = {};
+            for (const f of foods) {
+                foodMap[f.FoodId] = f;
+            }
+
+            for (const item of items) {
+                const foodId = item.productId || item.id;
+                const food = foodMap[foodId];
+                if (!food) {
+                    await connection.rollback();
+                    return res.status(400).json({ error: `Sản phẩm "${item.name || foodId}" không tồn tại` });
+                }
+                cartItems.push({
+                    FoodId: food.FoodId,
+                    FoodName: food.FoodName,
+                    Quantity: item.quantity || 1,
+                    BasePrice: food.BasePrice,
+                    Stock: food.Stock,
+                });
+            }
+        } else {
+            // Fallback: lấy giỏ hàng từ bảng GioHang trong DB
+            const [dbCartItems] = await connection.execute(`
+                SELECT g.FoodId, g.Quantity, f.BasePrice, f.Stock, f.FoodName
+                FROM GioHang g 
+                JOIN Food f ON g.FoodId = f.FoodId 
+                WHERE g.UserId = ?
+            `, [userId]);
+            cartItems = dbCartItems;
+        }
 
         if (cartItems.length === 0) {
             await connection.rollback();
@@ -146,8 +187,10 @@ exports.createOrder = async (req, res) => {
             );
         }
 
-        // 4. Xóa Giỏ hàng
-        await connection.execute(`DELETE FROM GioHang WHERE UserId = ?`, [userId]);
+        // 4. Xóa giỏ hàng DB (nếu dùng DB cart)
+        if (!usingFrontendCart) {
+            await connection.execute(`DELETE FROM GioHang WHERE UserId = ?`, [userId]);
+        }
 
         await connection.commit();
         res.status(201).json({ message: "Đặt hàng thành công!", orderId, orderCode, totalAmount });
@@ -186,6 +229,54 @@ exports.getOrderById = async (req, res) => {
         res.json({ order: orders[0], items });
     } catch (error) {
         console.error('GetOrderById error:', error.message);
+        res.status(500).json({ error: "Lỗi máy chủ" });
+    }
+};
+
+// Hủy đơn hàng — Chỉ cho phép hủy khi đang ở trạng thái "preparing" (StatusId = 1)
+exports.cancelOrder = async (req, res) => {
+    const orderId = req.params.id;
+    const userId = req.user.userId;
+
+    try {
+        // Kiểm tra đơn hàng tồn tại và thuộc về user
+        const [orders] = await pool.execute(
+            `SELECT OrderId, StatusId, OrderCode FROM Orders WHERE OrderId = ? AND UserId = ?`,
+            [orderId, userId]
+        );
+
+        if (orders.length === 0) {
+            return res.status(404).json({ error: "Không tìm thấy đơn hàng" });
+        }
+
+        const order = orders[0];
+
+        // Chỉ cho phép hủy khi đang chuẩn bị (StatusId = 1)
+        if (order.StatusId !== 1) {
+            return res.status(400).json({ error: "Chỉ có thể hủy đơn hàng đang ở trạng thái 'Đang chuẩn bị'" });
+        }
+
+        // Cập nhật trạng thái thành cancelled (StatusId = 4)
+        await pool.execute(
+            `UPDATE Orders SET StatusId = 4 WHERE OrderId = ?`,
+            [orderId]
+        );
+
+        // Hoàn lại stock cho các sản phẩm trong đơn
+        const [orderDetails] = await pool.execute(
+            `SELECT FoodId, Quantity FROM OrderDetails WHERE OrderId = ?`,
+            [orderId]
+        );
+        for (const detail of orderDetails) {
+            await pool.execute(
+                `UPDATE Food SET Stock = Stock + ? WHERE FoodId = ?`,
+                [detail.Quantity, detail.FoodId]
+            );
+        }
+
+        res.json({ message: "Đơn hàng đã được hủy thành công", orderCode: order.OrderCode });
+    } catch (error) {
+        console.error('CancelOrder error:', error.message);
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };

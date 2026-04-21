@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
+import { useUserProfile } from '../context/UserProfileContext';
+import { apiUrl } from '../config/api';
 
 const STATUS_ITEMS = [
   { id: 'preparing', label: 'Đang chuẩn bị' },
@@ -36,13 +38,16 @@ const StepItem = ({ label, active, danger, isDarkMode }) => (
 
 const OrderTrackingScreen = ({ navigation, route }) => {
   const { isDarkMode, colors } = useAppTheme();
+  const { token } = useUserProfile();
 
   const orderId = route.params?.orderId || '---';
+  const orderDbId = route.params?.orderDbId;
   const orderType = route.params?.type || '---';
   const orderTotal = route.params?.total || '---';
   const orderPayment = route.params?.payment || '---';
   const mainItem = route.params?.mainItem || 'Đơn hàng của bạn';
   const [currentStatus, setCurrentStatus] = useState(route.params?.status || 'preparing');
+  const [isCancelling, setIsCancelling] = useState(false);
   const currentStatusLabel = STATUS_ITEMS.find((s) => s.id === currentStatus)?.label || 'Không xác định';
 
   const canCancel = currentStatus === 'preparing';
@@ -56,9 +61,42 @@ const OrderTrackingScreen = ({ navigation, route }) => {
         {
           text: 'Hủy đơn',
           style: 'destructive',
-          onPress: () => {
-            setCurrentStatus('cancelled');
-            Alert.alert('Thành công', 'Đơn hàng đã được hủy.');
+          onPress: async () => {
+            if (!orderDbId) {
+              Alert.alert('Lỗi', 'Không tìm thấy mã đơn hàng để hủy.');
+              return;
+            }
+            setIsCancelling(true);
+            try {
+              const res = await fetch(apiUrl(`/api/orders/${orderDbId}/cancel`), {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+                },
+              });
+              const data = await res.json();
+              if (!res.ok) {
+                throw new Error(data?.error || 'Không thể hủy đơn hàng');
+              }
+              setCurrentStatus('cancelled');
+              Alert.alert('Thành công', 'Đơn hàng đã được hủy.', [
+                {
+                  text: 'OK',
+                  onPress: () => {
+                    navigation.navigate('MainTabs', {
+                      screen: 'Đặt Hàng',
+                      params: { refresh: Date.now() },
+                    });
+                  },
+                },
+              ]);
+            } catch (error) {
+              console.error('Cancel order error:', error);
+              Alert.alert('Lỗi', error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại.');
+            } finally {
+              setIsCancelling(false);
+            }
           },
         },
       ]
@@ -79,7 +117,7 @@ const OrderTrackingScreen = ({ navigation, route }) => {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <MaterialCommunityIcons name="package-variant-closed" size={36} color={colors.accent} />
           <Text style={[styles.orderId, { color: colors.accent }]}>Mã đơn: {orderId}</Text>
-          <Text style={styles.infoText}>Sản phẩm chính: {mainItem}</Text>
+          <Text style={styles.infoText}>Sản phẩm: {mainItem}</Text>
           <Text style={styles.infoText}>Hình thức: {orderType}</Text>
           <Text style={styles.infoText}>Thanh toán: {orderPayment}</Text>
           <Text style={styles.infoText}>Tổng đơn: {orderTotal}</Text>
