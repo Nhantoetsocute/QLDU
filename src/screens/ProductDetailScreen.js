@@ -39,7 +39,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     dimText: isDarkMode ? '#CFCFCF' : '#4B5563',
     overlayBtn: isDarkMode ? 'rgba(10,10,10,0.5)' : 'rgba(255,255,255,0.85)',
     modalBg: isDarkMode ? '#111111' : '#FFFFFF',
-    modalOverlay: isDarkMode ? 'rgba(0,0,0,0.55)' : 'rgba(0,0,0,0.2)',
+    modalOverlay: isDarkMode ? 'rgba(0,0,0,0.78)' : 'rgba(0,0,0,0.48)',
     inputBg: isDarkMode ? 'rgba(255,255,255,0.03)' : '#F3F4F6',
   };
 
@@ -71,6 +71,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [deliveryAddressFocused, setDeliveryAddressFocused] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
   const [hasPurchased, setHasPurchased] = useState(false);
   const [reviewText, setReviewText] = useState('');
   const [myRating, setMyRating] = useState(5);
@@ -85,6 +86,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
   const slideUpAnim = useRef(new Animated.Value(50)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const mainScrollRef = useRef(null);
+  const voucherScrollRef = useRef(null);
+  const addressSectionYRef = useRef(0);
   const scrollYRef = useRef(0);
   const viewportHeightRef = useRef(height);
   const contentHeightRef = useRef(height);
@@ -114,8 +117,31 @@ const ProductDetailScreen = ({ route, navigation }) => {
     ]).start();
   }, []);
 
+  useEffect(() => {
+    const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
   const increaseQuantity = () => setQuantity(prev => prev + 1);
   const decreaseQuantity = () => setQuantity(prev => (prev > 1 ? prev - 1 : 1));
+
+  const handleAddressInputFocus = () => {
+    setDeliveryAddressFocused(true);
+    setTimeout(() => {
+      voucherScrollRef.current?.scrollTo({
+        y: Math.max(0, addressSectionYRef.current - 12),
+        animated: true,
+      });
+    }, 180);
+  };
 
   const renderStars = (rating, size = 14) => (
     <View style={styles.starRow}>
@@ -374,12 +400,16 @@ const ProductDetailScreen = ({ route, navigation }) => {
           <View style={[styles.divider, { backgroundColor: ui.border }]} />
 
           {/* Mô tả */}
-          <Text style={[styles.sectionTitle, { color: accent }]}>Mô tả hương vị</Text>
-          <View style={styles.descriptionScroll}>
-            <Text style={[styles.descriptionText, { color: ui.subText }]}> 
-              {item.description || 'Hương vị tuyệt hảo được pha chế từ những nguyên liệu thượng hạng nhất, mang đến cho bạn trải nghiệm xa xỉ đích thực.'}
-            </Text>
-          </View>
+          {!voucherModalVisible ? (
+            <>
+              <Text style={[styles.sectionTitle, { color: accent }]}>Mô tả hương vị</Text>
+              <View style={styles.descriptionScroll}>
+                <Text style={[styles.descriptionText, { color: ui.subText }]}> 
+                  {item.description || 'Hương vị tuyệt hảo được pha chế từ những nguyên liệu thượng hạng nhất, mang đến cho bạn trải nghiệm xa xỉ đích thực.'}
+                </Text>
+              </View>
+            </>
+          ) : null}
 
           {/* Chỉnh số lượng */}
           <View style={[styles.quantitySection, { backgroundColor: ui.card, borderColor: ui.border }]}>
@@ -459,23 +489,53 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
       <Modal
         visible={voucherModalVisible}
-        transparent
+        transparent={true}
         animationType="slide"
+        presentationStyle="overFullScreen"
+        statusBarTranslucent
         onRequestClose={() => setVoucherModalVisible(false)}
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+          behavior={undefined}
+          keyboardVerticalOffset={0}
         >
           <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-            <View style={[styles.voucherModalOverlay, { backgroundColor: ui.modalOverlay }]}> 
-              <View style={[styles.voucherModalCard, { backgroundColor: ui.modalBg, borderColor: ui.border }]}> 
+            <View style={[styles.voucherModalOverlay, { backgroundColor: ui.modalBg }]}> 
+              <View pointerEvents="none" style={styles.voucherPreviewArea}>
+                <Image source={imageSource} style={styles.voucherPreviewImage} />
+                <View
+                  style={[
+                    styles.voucherPreviewGradient,
+                    { backgroundColor: isDarkMode ? 'rgba(10,10,10,0.55)' : 'rgba(255,255,255,0.18)' },
+                  ]}
+                />
+              </View>
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.voucherBackdropTop,
+                  { backgroundColor: 'transparent' },
+                ]}
+              />
+              <View
+                pointerEvents="none"
+                style={[
+                  styles.voucherBackdropBottom,
+                  { backgroundColor: ui.modalBg },
+                ]}
+              />
+              <View style={[styles.voucherModalCard, isKeyboardVisible && styles.voucherModalCardKeyboard, { backgroundColor: ui.modalBg, borderColor: ui.border }]}> 
                 <ScrollView
+                  ref={voucherScrollRef}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
                   keyboardDismissMode="on-drag"
-                  contentContainerStyle={styles.voucherScrollContent}
+                  automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+                  contentContainerStyle={[
+                    styles.voucherScrollContent,
+                    isKeyboardVisible && styles.voucherScrollContentKeyboard,
+                  ]}
                 >
             <Text style={[styles.voucherModalTitle, { color: ui.text }]}>Chọn ưu đãi áp dụng</Text>
 
@@ -511,25 +571,27 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
             {checkoutMode === 'buy' ? (
               <>
-                <Text style={[styles.voucherGroupTitle, { color: accent }]}>Địa chỉ nhận hàng</Text>
-                <Text style={[styles.addressHint, { color: ui.subText }]}>Nhập đầy đủ số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố</Text>
-                <TextInput
-                  value={deliveryAddress}
-                  onChangeText={setDeliveryAddress}
-                  onFocus={() => setDeliveryAddressFocused(true)}
-                  onBlur={() => setDeliveryAddressFocused(false)}
-                  placeholder="Ví dụ: 12 Thái Hà, Trung Liệt, Đống Đa, Hà Nội"
-                  placeholderTextColor={ui.subText}
-                  style={[
-                    styles.addressInput,
-                    {
-                      color: ui.text,
-                      borderColor: deliveryAddressFocused ? accent : ui.border,
-                      backgroundColor: deliveryAddressFocused ? (isDarkMode ? 'rgba(212,175,55,0.08)' : 'rgba(212,175,55,0.08)') : ui.inputBg,
-                    },
-                  ]}
-                  multiline
-                />
+                <View onLayout={(event) => { addressSectionYRef.current = event.nativeEvent.layout.y; }}>
+                  <Text style={[styles.voucherGroupTitle, { color: accent }]}>Địa chỉ nhận hàng</Text>
+                  <Text style={[styles.addressHint, { color: ui.subText }]}>Nhập đầy đủ số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố</Text>
+                  <TextInput
+                    value={deliveryAddress}
+                    onChangeText={setDeliveryAddress}
+                    onFocus={handleAddressInputFocus}
+                    onBlur={() => setDeliveryAddressFocused(false)}
+                    placeholder="Ví dụ: 12 Thái Hà, Trung Liệt, Đống Đa, Hà Nội"
+                    placeholderTextColor={ui.subText}
+                    style={[
+                      styles.addressInput,
+                      {
+                        color: ui.text,
+                        borderColor: deliveryAddressFocused ? accent : ui.border,
+                        backgroundColor: deliveryAddressFocused ? (isDarkMode ? 'rgba(212,175,55,0.08)' : 'rgba(212,175,55,0.08)') : ui.inputBg,
+                      },
+                    ]}
+                    multiline
+                  />
+                </View>
 
                 <Text style={[styles.voucherGroupTitle, { color: accent }]}>Hình thức thanh toán</Text>
                 <View style={styles.paymentMethodRow}>
@@ -860,8 +922,42 @@ const styles = StyleSheet.create({
   },
   voucherModalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
+    backgroundColor: 'transparent',
     justifyContent: 'flex-end',
+  },
+  voucherPreviewArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.55,
+    overflow: 'hidden',
+  },
+  voucherPreviewImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  voucherPreviewGradient: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 150,
+  },
+  voucherBackdropTop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: height * 0.48,
+  },
+  voucherBackdropBottom: {
+    position: 'absolute',
+    top: height * 0.48,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   voucherModalCard: {
     backgroundColor: '#111111',
@@ -871,9 +967,17 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderColor: 'rgba(212,175,55,0.3)',
     maxHeight: '80%',
+    overflow: 'hidden',
+    elevation: 16,
+  },
+  voucherModalCardKeyboard: {
+    maxHeight: '62%',
   },
   voucherScrollContent: {
     paddingBottom: 8,
+  },
+  voucherScrollContentKeyboard: {
+    paddingBottom: 220,
   },
   voucherModalTitle: {
     color: '#FFF',
