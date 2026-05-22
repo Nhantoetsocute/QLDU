@@ -71,7 +71,7 @@ app.use((req, res, next) => {
 
 // Global error handler — bắt mọi lỗi không xử lý được
 app.use((err, req, res, next) => {
-    console.error('💥 Unhandled Error:', err.stack || err.message);
+    console.error('Unhandled Error:', err.stack || err.message);
     res.status(500).json({ error: 'Lỗi máy chủ nội bộ' });
 });
 

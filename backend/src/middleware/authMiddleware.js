@@ -6,10 +6,9 @@ const verifyToken = (req, res, next) => {
     if (!header) {
         return res.status(401).json({ error: "Yêu cầu đăng nhập." });
     }
-    
-    // Hỗ trợ cả "Bearer TOKEN" và "TOKEN" thuần
+
     const token = header.startsWith('Bearer ') ? header.slice(7) : header;
-    
+
     if (!token) {
         return res.status(401).json({ error: "Token không hợp lệ." });
     }

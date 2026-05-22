@@ -1,7 +1,7 @@
-# 🥤 QuanLyBanNuoc (QLDU)
+# QuanLyBanNuoc (QLDU)
 
 Ứng dụng quản lý bán nước — React Native (Expo) + Node.js Express + MySQL.
-## 👥 Thành viên nhóm
+## Thành viên nhóm
 
 | STT | Họ và tên | MSSV |
 |:---:|-----------|------|
@@ -10,7 +10,7 @@
 | 3 | Nguyễn Bá Nhân | 23810310144 |
 ---
 
-## 📋 Yêu cầu hệ thống
+## Yêu cầu hệ thống
 
 | Công cụ        | Phiên bản       | Ghi chú                        |
 | -------------- | --------------- | ------------------------------ |
@@ -22,7 +22,7 @@
 
 ---
 
-## 🚀 Hướng dẫn cài đặt (3 bước)
+## Hướng dẫn cài đặt (3 bước)
 
 ### Bước 1: Tạo Database
 
@@ -70,7 +70,7 @@ Scan QR code bằng app **Expo Go** trên điện thoại (cùng mạng WiFi v�
 
 ---
 
-## 📁 Cấu trúc dự án
+## Cấu trúc dự án
 
 ```
 QLDU/
@@ -99,7 +99,7 @@ QLDU/
 
 ---
 
-## 🔌 API Endpoints
+## API Endpoints
 
 | Method | Endpoint                        | Auth | Mô tả                    |
 | ------ | ------------------------------- | ---- | ------------------------- |
@@ -119,7 +119,7 @@ QLDU/
 
 ---
 
-## ⚙️ Biến môi trường (Backend)
+## Biến môi trường (Backend)
 
 Xem file `backend/.env.example` để biết tất cả biến cần thiết.
 
@@ -138,7 +138,7 @@ Xem file `backend/.env.example` để biết tất cả biến cần thiết.
 
 ---
 
-## 🛠 Scripts Backend
+## Scripts Backend
 
 ```bash
 npm start        # Chạy server

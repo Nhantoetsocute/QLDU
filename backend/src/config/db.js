@@ -21,11 +21,11 @@ const pool = mysql.createPool({
 // Kiểm tra kết nối khi khởi động
 pool.getConnection()
     .then(conn => {
-        console.log('✅ MySQL connected successfully');
+        console.log('MySQL kết nối thành công');
         conn.release();
     })
     .catch(err => {
-        console.error('❌ MySQL connection failed:', err.message);
+        console.error('MySQL kết nối thất bại:', err.message);
     });
 
 module.exports = pool;

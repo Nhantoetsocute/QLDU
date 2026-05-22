@@ -1,4 +1,4 @@
-require('dotenv').config({path: './.env'});
+require('dotenv').config({ path: './.env' });
 const pool = require('./src/config/db');
 
 async function seed() {
@@ -34,10 +34,10 @@ async function seed() {
 
         // Verify
         const [rows] = await pool.execute('SELECT FoodId, FoodName, BasePrice FROM Food ORDER BY FoodId');
-        console.log(`✅ Seeded ${rows.length} products:`);
+        console.log(`Seeded ${rows.length} products:`);
         rows.forEach(r => console.log(`  [${r.FoodId}] ${r.FoodName} - ${Number(r.BasePrice).toLocaleString('vi-VN')} đ`));
     } catch (e) {
-        console.error("❌ Seeding fail:", e.message);
+        console.error("Seeding fail:", e.message);
     } finally {
         process.exit();
     }
