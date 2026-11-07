@@ -8,6 +8,7 @@ async function resetDB() {
     // Kết nối đến MySQL nhưng không chỉ định database cụ thể
     // Cho phép chạy nhiều lệnh cùng lúc (multipleStatements)
     const connection = await mysql.createConnection({
+        ssl: require('./src/security/transport').databaseTlsOptions(),
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,

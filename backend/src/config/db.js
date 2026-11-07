@@ -1,7 +1,9 @@
 const mysql = require('mysql2/promise');
+const { databaseTlsOptions } = require('../security/transport');
 
 // Kết nối Database Promise-based — Tối ưu hóa connection pool
 const pool = mysql.createPool({
+    ssl: databaseTlsOptions(),
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
@@ -25,7 +27,7 @@ pool.getConnection()
         conn.release();
     })
     .catch(err => {
-        console.error('MySQL kết nối thất bại:', err.message);
+        console.error('MySQL kết nối thất bại:', err.code || 'DATABASE_ERROR');
     });
 
 module.exports = pool;

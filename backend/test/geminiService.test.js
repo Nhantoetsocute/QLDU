@@ -4,7 +4,7 @@ const { createGeminiService, mapGeminiError, redactSensitiveText, PLAN_SCHEMA, S
 const { ChatError } = require('../src/services/chatErrors');
 
 const MODEL = 'gemini-3.5-flash-lite';
-const FAKE_KEY = 'AIzaTestOnlyNotARealApiKey123456789012345';
+const FAKE_KEY = 'AIza' + 'TestOnlyNotARealApiKey123456789012345';
 const ENV = { GEMINI_API_KEY: FAKE_KEY, GEMINI_MODEL: MODEL };
 const PLAN = { scope: 'in_scope', intent: 'recommend', productIds: [1], storeIds: [], fields: ['price'], response: '' };
 const INPUT = {

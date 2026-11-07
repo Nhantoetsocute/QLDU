@@ -101,6 +101,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -171,7 +172,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
         body: JSON.stringify({ email, otp, newPassword })
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Có lỗi xảy ra');
+      if (!res.ok) {
+        if (data.code === 'WEAK_PASSWORD' || data.error?.startsWith('Mật khẩu')) {
+          setPasswordError(data.error || 'Mật khẩu cần dài ít nhất 12 ký tự và không phổ biến hoặc bị lộ.');
+          return;
+        }
+        throw new Error(data.error || 'Có lỗi xảy ra');
+      }
       Alert.alert('Thành công', 'Khôi phục mật khẩu thành công!', [
         { text: 'Đăng nhập', onPress: () => navigation?.navigate('Login') }
       ]);
@@ -286,12 +293,14 @@ const ForgotPasswordScreen = ({ navigation }) => {
                       placeholderTextColor="#A9A9A9"
                       secureTextEntry={!showNewPassword}
                       value={newPassword}
-                      onChangeText={setNewPassword}
+                      onChangeText={(value) => { setNewPassword(value); setPasswordError(''); }}
                     />
                     <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
                       <Ionicons name={showNewPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#D4AF37" />
                     </TouchableOpacity>
                   </View>
+                  <Text style={styles.passwordHint}>Dùng cụm mật khẩu dài và riêng biệt; backend sẽ kiểm tra mật khẩu phổ biến hoặc đã bị lộ.</Text>
+                  {!!passwordError && <Text accessibilityLiveRegion="polite" style={styles.passwordError}>{passwordError}</Text>}
 
                   <View style={styles.inputWrapper}>
                     <Ionicons name="lock-closed-outline" size={20} color="#D4AF37" style={styles.inputIcon} />
@@ -398,6 +407,8 @@ const styles = StyleSheet.create({
   inputIcon: {
     marginRight: 10,
   },
+  passwordHint: { color: '#E0E0E0', fontSize: 12, lineHeight: 18, marginTop: -8, marginBottom: 12 },
+  passwordError: { color: '#FF9A9A', fontSize: 13, lineHeight: 19, marginBottom: 12 },
   input: {
     flex: 1,
     fontSize: 15,

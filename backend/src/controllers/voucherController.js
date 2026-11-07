@@ -4,16 +4,16 @@ const pool = require('../config/db');
 exports.getVouchers = async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT VoucherId as id, Code as code, DiscountAmount as discount, 
-                   DiscountPercentage as percentage, MinOrderAmount as minOrder, 
+            SELECT VoucherId as id, Code as code, DiscountAmount as discount,
+                   DiscountPercentage as percentage, MinOrderAmount as minOrder,
                    DATE_FORMAT(ExpiryDate, '%d/%m/%Y') as expiryDate
-            FROM Vouchers 
+            FROM Vouchers
             WHERE IsActive = 1 AND ExpiryDate > NOW()
             ORDER BY ExpiryDate ASC
         `);
         res.json(rows);
     } catch (error) {
-        console.error('GetVouchers error:', error.message);
+        console.error('GetVouchers error:', error.code || 'REQUEST_FAILED');
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };
@@ -27,9 +27,9 @@ exports.validateVoucher = async (req, res) => {
 
     try {
         const [vouchers] = await pool.execute(`
-            SELECT VoucherId as id, Code as code, DiscountAmount as discount, 
+            SELECT VoucherId as id, Code as code, DiscountAmount as discount,
                    DiscountPercentage as percentage, MinOrderAmount as minOrder
-            FROM Vouchers 
+            FROM Vouchers
             WHERE Code = ? AND IsActive = 1 AND ExpiryDate > NOW()
             LIMIT 1
         `, [code.trim().toUpperCase()]);
@@ -39,25 +39,27 @@ exports.validateVoucher = async (req, res) => {
         }
 
         const voucher = vouchers[0];
-        if (orderAmount && orderAmount < voucher.minOrder) {
-            return res.status(400).json({ 
+        if (orderAmount < Number(voucher.minOrder)) {
+            return res.status(400).json({
                 error: `Đơn hàng tối thiểu ${voucher.minOrder.toLocaleString('vi-VN')}đ để dùng mã này`,
                 minOrder: voucher.minOrder
             });
         }
 
-        const discountAmount = voucher.discount > 0 
-            ? voucher.discount 
+        const rawDiscount = voucher.discount > 0
+            ? voucher.discount
             : Math.round((orderAmount || 0) * voucher.percentage / 100);
 
-        res.json({ 
-            valid: true, 
+        const discountAmount = Math.max(0, Math.min(orderAmount, Number(rawDiscount)));
+        if (!Number.isFinite(discountAmount)) return res.status(503).json({error:"Voucher không hợp lệ"});
+        res.json({
+            valid: true,
             voucher,
             discountAmount,
-            message: `Giảm ${discountAmount.toLocaleString('vi-VN')}đ` 
+            message: `Giảm ${discountAmount.toLocaleString('vi-VN')}đ`
         });
     } catch (error) {
-        console.error('ValidateVoucher error:', error.message);
+        console.error('ValidateVoucher error:', error.code || 'REQUEST_FAILED');
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };

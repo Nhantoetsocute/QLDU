@@ -82,8 +82,29 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [failedAttempts, setFailedAttempts] = useState(0);
+  const [lockDuration, setLockDuration] = useState(30);
+  const [cooldownUntil, setCooldownUntil] = useState(0);
+  const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [loginFeedback, setLoginFeedback] = useState('');
+
+  useEffect(() => {
+    if (!cooldownUntil) {
+      setRemainingSeconds(0);
+      return undefined;
+    }
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+      setRemainingSeconds(remaining);
+      if (!remaining) setCooldownUntil(0);
+    };
+    update();
+    const interval = setInterval(update, 500);
+    return () => clearInterval(interval);
+  }, [cooldownUntil]);
 
   const handleLogin = async () => {
+    if (remainingSeconds > 0) return;
     if (!username || !password) {
       Alert.alert("Lỗi", "Vui lòng nhập Email và Mật khẩu!");
       return;
@@ -106,10 +127,34 @@ const LoginScreen = ({ navigation }) => {
       const data = await response.json();
       
       if (response.ok) {
+        setFailedAttempts(0);
+        setLockDuration(30);
+        setCooldownUntil(0);
+        setLoginFeedback('');
         await loginContext(data.token, data.user);
-        navigation?.replace('MainTabs');
+        // Authenticated navigation is mounted by AppNavigator after session validation.
       } else {
-        Alert.alert("Từ chối!", data.error || "Sai tài khoản hoặc mật khẩu");
+        if (response.status === 401) {
+          const nextAttempt = failedAttempts + 1;
+          if (nextAttempt >= 4) {
+            const duration = nextAttempt === 4 ? lockDuration : lockDuration + 30;
+            setFailedAttempts(4);
+            setLockDuration(duration);
+            setCooldownUntil(Date.now() + duration * 1000);
+            setLoginFeedback(`Thông tin đăng nhập không hợp lệ hoặc có thể đang bị tạm khóa. Vui lòng thử lại sau ${duration} giây hoặc khôi phục mật khẩu.`);
+          } else {
+            setFailedAttempts(nextAttempt);
+            setLoginFeedback(nextAttempt === 3
+              ? 'Thông tin đăng nhập không hợp lệ. Lần thử sai tiếp theo có thể tạm khóa đăng nhập. Nếu quên mật khẩu, hãy dùng “Quên mật khẩu?”.'
+              : 'Thông tin đăng nhập không hợp lệ. Kiểm tra email và mật khẩu hoặc dùng “Quên mật khẩu?”.');
+          }
+        } else if (response.status === 429) {
+          const retryAfter = Math.max(1, Number(response.headers.get('Retry-After')) || 30);
+          setCooldownUntil(Date.now() + retryAfter * 1000);
+          setLoginFeedback(`Yêu cầu đăng nhập đang bị giới hạn. Vui lòng thử lại sau ${retryAfter} giây.`);
+        } else {
+          setLoginFeedback(data.error || 'Không thể đăng nhập. Vui lòng thử lại.');
+        }
       }
     } catch (error) {
       if (error?.name === 'AbortError' || error?.message === 'Aborted') {
@@ -148,7 +193,15 @@ const LoginScreen = ({ navigation }) => {
                   placeholder="Tên đăng nhập hoặc Email"
                   placeholderTextColor="#A9A9A9"
                   value={username}
-                  onChangeText={setUsername}
+                  onChangeText={(value) => {
+                    if (value.trim().toLowerCase() !== username.trim().toLowerCase()) {
+                      setFailedAttempts(0);
+                      setLockDuration(30);
+                      setCooldownUntil(0);
+                    }
+                    setUsername(value);
+                    setLoginFeedback('');
+                  }}
                   editable={!isLoading}
                 />
               </View>
@@ -160,7 +213,7 @@ const LoginScreen = ({ navigation }) => {
                   placeholderTextColor="#A9A9A9"
                   secureTextEntry={!showPassword}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(value) => { setPassword(value); setLoginFeedback(''); }}
                   editable={!isLoading}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={isLoading}>
@@ -174,12 +227,15 @@ const LoginScreen = ({ navigation }) => {
               <TouchableOpacity style={styles.forgotPassword} onPress={() => navigation?.navigate('ForgotPassword')} disabled={isLoading}>
                 <Text style={styles.forgotPasswordText}>Quên mật khẩu?</Text>
               </TouchableOpacity>
+              {!!loginFeedback && <Text accessibilityLiveRegion="polite" style={styles.loginFeedback}>{loginFeedback}</Text>}
               <TouchableOpacity 
-                style={[styles.loginButton, isLoading && { opacity: 0.7 }]} 
+                style={[styles.loginButton, (isLoading || remainingSeconds > 0) && { opacity: 0.7 }]}
                 onPress={handleLogin}
-                disabled={isLoading}
+                disabled={isLoading || remainingSeconds > 0}
               >
-                {isLoading ? (
+                {remainingSeconds > 0 ? (
+                  <Text style={styles.loginButtonText}>THỬ LẠI SAU {remainingSeconds}s</Text>
+                ) : isLoading ? (
                   <Text style={styles.loginButtonText}>ĐANG XỬ LÝ...</Text>
                 ) : (
                   <Text style={styles.loginButtonText}>BẮT ĐẦU HÀNH TRÌNH</Text>
@@ -214,6 +270,7 @@ const styles = StyleSheet.create({
   input: { flex: 1, fontSize: 16, color: '#FFF' },
   forgotPassword: { alignSelf: 'flex-end', marginBottom: 25 },
   forgotPasswordText: { color: '#D4AF37', fontSize: 14, fontWeight: '500' },
+  loginFeedback: { color: '#FFD98A', fontSize: 13, lineHeight: 19, marginBottom: 12 },
   loginButton: { backgroundColor: '#D4AF37', borderRadius: 12, height: 55, justifyContent: 'center', alignItems: 'center', shadowColor: '#D4AF37', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4, shadowRadius: 8, elevation: 5 },
   loginButtonText: { color: '#1A1A1A', fontSize: 16, fontWeight: 'bold', letterSpacing: 1 },
   signupContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 30 },

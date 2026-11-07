@@ -15,6 +15,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { apiUrl } from '../config/api';
+import { readAiConsent, setAiConsent, subscribeAiConsent, resetAiConsent } from '../services/aiConsent';
+import { subscribePrivacyReset } from '../services/privacyStorage';
 import { resolveCatalogImage, toProductItem } from '../services/catalog';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -51,6 +53,7 @@ const ChatScreen = ({ navigation }) => {
   const styles = useMemo(() => createStyles(colors, isDarkMode), [colors, isDarkMode]);
   const [messages, setMessages] = useState([{ id: 'welcome', role: 'assistant', content: WELCOME, products: [] }]);
   const [draft, setDraft] = useState('');
+  const [aiAllowed, setAiAllowed] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [failure, setFailure] = useState(null);
   const [retryAvailableAt, setRetryAvailableAt] = useState(0);
@@ -61,6 +64,27 @@ const ChatScreen = ({ navigation }) => {
   const sendingRef = useRef(false);
   const mountedRef = useRef(true);
   const sequenceRef = useRef(0);
+  const consentRef = useRef(false);
+  const sessionRef = useRef(0);
+
+  useEffect(() => {
+    const clearChat = () => {
+      sessionRef.current++;
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+      sendingRef.current = false;
+      historyRef.current = [];
+      setMessages([{id:'welcome',role:'assistant',content:WELCOME,products:[]}]);
+      setDraft(''); setFailure(null); setIsSending(false); setRetryAvailableAt(0);
+    };
+    const offConsent = subscribeAiConsent((allowed) => {
+      consentRef.current = allowed; setAiAllowed(allowed);
+      if (!allowed) clearChat();
+    });
+    const offPrivacy = subscribePrivacyReset(() => { resetAiConsent(); clearChat(); });
+    readAiConsent().catch(() => { consentRef.current = false; setAiAllowed(false); });
+    return () => { offConsent(); offPrivacy(); };
+  }, []);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -89,8 +113,9 @@ const ChatScreen = ({ navigation }) => {
 
   const sendMessage = async (input, retryMessageId = null) => {
     const message = input.trim();
-    if (!message || message.length > MAX_MESSAGE_LENGTH || sendingRef.current || Date.now() < retryAvailableAt) return;
+    if (!consentRef.current || !token || !message || message.length > MAX_MESSAGE_LENGTH || sendingRef.current || Date.now() < retryAvailableAt) return;
 
+    const session = sessionRef.current;
     const messageId = retryMessageId || `user-${Date.now()}-${++sequenceRef.current}`;
     const previousHistory = buildChatHistory(historyRef.current);
     sendingRef.current = true;
@@ -111,7 +136,7 @@ const ChatScreen = ({ navigation }) => {
       const response = await fetch(apiUrl('/api/chat'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ message, history: previousHistory }),
+        body: JSON.stringify({ message, history: previousHistory, aiConsent: true }),
         signal: controller.signal,
       });
       let data;
@@ -131,7 +156,7 @@ const ChatScreen = ({ navigation }) => {
         throw error;
       }
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || session !== sessionRef.current || !consentRef.current) return;
       const reply = data.reply.trim();
       // Product cards come only from the backend's validated database results.
       const products = Array.isArray(data.products) ? data.products.filter((product) =>
@@ -143,7 +168,7 @@ const ChatScreen = ({ navigation }) => {
         { id: `assistant-${Date.now()}-${++sequenceRef.current}`, role: 'assistant', content: reply, products },
       ]);
     } catch (error) {
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || session !== sessionRef.current || !consentRef.current) return;
       const isNetworkError = error instanceof TypeError || /network|fetch failed|network request failed/i.test(error?.message || '');
       const errorMessage = error?.name === 'AbortError'
         ? 'Trợ lý phản hồi hơi lâu. Bạn có thể thử lại sau, khi kết nối ổn định hơn.'
@@ -155,8 +180,10 @@ const ChatScreen = ({ navigation }) => {
     } finally {
       clearTimeout(timeout);
       if (controllerRef.current === controller) controllerRef.current = null;
-      sendingRef.current = false;
-      if (mountedRef.current) setIsSending(false);
+      if (session === sessionRef.current) {
+        sendingRef.current = false;
+        if (mountedRef.current) setIsSending(false);
+      }
     }
   };
 
@@ -203,7 +230,7 @@ const ChatScreen = ({ navigation }) => {
     );
   };
 
-  const canSend = !!draft.trim() && !isSending && !retryCountdown;
+  const canSend = aiAllowed && !!token && !!draft.trim() && !isSending && !retryCountdown;
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -217,6 +244,20 @@ const ChatScreen = ({ navigation }) => {
           <Text style={styles.headerSubtitle}>Tư vấn sản phẩm & cửa hàng</Text>
         </View>
       </View>
+
+      {!aiAllowed && (
+        <View style={{padding:16,backgroundColor:colors.card}}>
+          <Text style={{color:colors.text,lineHeight:21}}>Câu hỏi và lịch sử chat gần đây sẽ được gửi tới Google Gemini. Với gói miễn phí, Google có thể dùng nội dung để cải thiện sản phẩm. Không gửi thông tin cá nhân hay bí mật. Bạn có thể tắt chia sẻ tại Quyền riêng tư.</Text>
+          <TouchableOpacity accessibilityRole="button" onPress={async () => {
+            try { await setAiConsent(true); } catch { await setAiConsent(false).catch(() => {}); }
+          }} style={{paddingVertical:12}}>
+            <Text style={{color:colors.accent,fontWeight:'700'}}>Tôi đồng ý sử dụng trợ lý AI</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Privacy')}>
+            <Text style={{color:colors.subText}}>Xem quyền riêng tư và lựa chọn dữ liệu</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       <KeyboardAvoidingView style={styles.chatArea} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={0}>
         <FlatList
@@ -234,7 +275,7 @@ const ChatScreen = ({ navigation }) => {
           ListFooterComponent={
             <>
               {messages.length === 1 && <View style={styles.suggestions}>
-                {SUGGESTIONS.map((question) => <TouchableOpacity key={question} style={styles.suggestion} onPress={() => sendMessage(question)} disabled={isSending || !!retryCountdown} accessibilityRole="button">
+                {SUGGESTIONS.map((question) => <TouchableOpacity key={question} style={styles.suggestion} onPress={() => sendMessage(question)} disabled={!aiAllowed || !token || isSending || !!retryCountdown} accessibilityRole="button">
                   <Text style={styles.suggestionText}>{question}</Text><Ionicons name="arrow-up-outline" size={15} color={colors.accent} />
                 </TouchableOpacity>)}
               </View>}
@@ -247,7 +288,7 @@ const ChatScreen = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.retryButton, (isSending || !!retryCountdown) && styles.disabled]}
                   onPress={() => sendMessage(failure.question, failure.messageId)}
-                  disabled={isSending || !!retryCountdown}
+                  disabled={!aiAllowed || !token || isSending || !!retryCountdown}
                   accessibilityRole="button"
                   accessibilityLabel="Thử gửi lại tin nhắn"
                 >

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -34,19 +34,18 @@ const HIDDEN_CHAT_ROUTES = new Set(['Chat', 'Login', 'SignUp', 'ForgotPassword']
 
 const AppNavigator = () => {
   const { navigationTheme } = useAppTheme();
-  const { token } = useUserProfile();
+  const { token, isLoading } = useUserProfile();
   const navigationRef = useNavigationContainerRef();
   const [currentRoute, setCurrentRoute] = useState('Login');
   const updateCurrentRoute = () => setCurrentRoute(navigationRef.getCurrentRoute()?.name || 'Login');
 
+  if (isLoading) return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator accessibilityLabel="Đang xác thực phiên" /></View>;
+
   return (
     <NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={updateCurrentRoute} onStateChange={updateCurrentRoute}>
       <View style={styles.navigationRoot}>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {/* Các màn hình liên quan đến Đăng nhập/Đăng ký KHÔNG có thanh Tab ở dưới */}
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="SignUp" component={SignUpScreen} />
-        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Navigator key={token ? 'signed-in' : 'signed-out'} initialRouteName={token ? 'MainTabs' : 'Login'} screenOptions={{ headerShown: false }}>
+        {token ? (<>
         <Stack.Screen name="AllProducts" component={AllProductsScreen} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />
         <Stack.Screen name="Cart" component={CartScreen} />
@@ -58,12 +57,17 @@ const AppNavigator = () => {
         <Stack.Screen name="Checkout" component={CheckoutScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Language" component={LanguageScreen} />
-        <Stack.Screen name="Privacy" component={PrivacyScreen} />
         <Stack.Screen name="HelpCenter" component={HelpCenterScreen} />
-        <Stack.Screen name="Terms" component={TermsScreen} />
         <Stack.Screen name="Chat" component={ChatScreen} />
         {/* Sau khi đăng nhập thành công, chuyển hướng vào MainTabs -> Sẽ thấy thanh Bottom Bar */}
         <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+        </>) : (<>
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="SignUp" component={SignUpScreen} />
+        <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        </>)}
+        <Stack.Screen name="Privacy" component={PrivacyScreen} />
+        <Stack.Screen name="Terms" component={TermsScreen} />
       </Stack.Navigator>
       {!!token && (
         <FloatingChatButton visible={!HIDDEN_CHAT_ROUTES.has(currentRoute)} onPress={() => {

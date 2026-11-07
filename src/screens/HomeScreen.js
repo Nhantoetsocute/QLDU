@@ -1,3 +1,4 @@
+import PrivateAvatar from '../components/PrivateAvatar';
 import BackgroundImage from '../components/BackgroundImage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -99,7 +100,7 @@ const categories = [
 
 const HomeScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
-  const { profile, logoutContext, avatarUri } = useUserProfile();
+  const { profile, logoutContext, avatarUri, token } = useUserProfile();
   const { cartItems, addToCart } = useCart();
   const [premiumProducts, setPremiumProducts] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
@@ -194,8 +195,8 @@ const HomeScreen = ({ navigation }) => {
                       text: 'Đăng xuất',
                       style: 'destructive',
                       onPress: async () => {
-                        await logoutContext();
-                        navigation.replace('Login');
+                        try { await logoutContext(); } catch { Alert.alert('Đăng xuất', 'Phiên trong app đã đóng. Chưa xóa hết dữ liệu trên thiết bị.'); }
+                        // AppNavigator resets the authenticated navigation tree.
                       },
                     },
                   ]
@@ -204,8 +205,8 @@ const HomeScreen = ({ navigation }) => {
               activeOpacity={0.7}
             >
               {(avatarUri || profile?.avatar) ? (
-                <Image
-                  source={{ uri: avatarUri || profile.avatar }}
+                <PrivateAvatar
+                  uri={avatarUri || profile.avatar} token={token}
                   style={styles.avatar}
                 />
               ) : (
