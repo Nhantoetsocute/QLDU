@@ -3,14 +3,20 @@
   "version": "1.0.0",
   "description": "Backend API Node.js cho app QuanLyBanNuoc",
   "main": "server.js",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
+    "start": "PATH=\"/private/tmp/qldu-node24/node_modules/.bin:$PATH\" node server.js",
+    "dev": "npm start",
+    "test": "PATH=\"/private/tmp/qldu-node24/node_modules/.bin:$PATH\" node --test test/*.test.js",
+    "check:gemini": "PATH=\"/private/tmp/qldu-node24/node_modules/.bin:$PATH\" node scripts/check-gemini.js",
     "reset-db": "node reset-db.js",
     "seed": "node seed_food.js",
     "setup": "node reset-db.js && node seed_food.js"
   },
   "dependencies": {
+    "@google/genai": "^3.0.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

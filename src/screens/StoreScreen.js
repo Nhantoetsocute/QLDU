@@ -15,11 +15,13 @@ import {
   Alert,
   TouchableWithoutFeedback,
   Keyboard,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { useAppTheme } from '../theme/ThemeContext';
+import { fetchStores } from '../services/catalog';
 
 const ORANGE_COLOR = '#E57905';
 const DEPOSIT_AMOUNT = 100000;
@@ -32,97 +34,6 @@ const isTableAvailable = (storeId, slot, tableNo) => {
   return seed % 4 !== 0;
 };
 
-// --- DỮ LIỆU THẬT CHI NHÁNH ---
-// Tọa độ và link embed đã được fix cứng theo vị trí thực tế tại Hà Nội
-const mockStores = [
-  {
-    id: '1',
-    name: 'True Juice Thái Hà',
-    address: '12 Thái Hà, Trung Liệt, Đống Đa, Hà Nội',
-    distance: '1.2 km',
-    status: 'Đang mở cửa',
-    time: '07:00 - 22:30',
-    phone: '024 1234 5678',
-    image: require('../../assets/images/nen1.png'),
-    amenities: ['Wifi miễn phí', 'Chỗ để xe máy', 'Thanh toán thẻ'],
-    // URL Nhúng bản đồ thật của khu vực 12 Thái Hà
-    mapEmbedUrl: 'https://maps.google.com/maps?q=12+Thái+Hà,+Đống+Đa,+Hà+Nội&hl=vi&z=16&output=embed',
-    lat: 21.011311,
-    lng: 105.819779,
-  },
-  {
-    id: '2',
-    name: 'True Juice Cầu Giấy',
-    address: '89 Cầu Giấy, Quan Hoa, Cầu Giấy, Hà Nội',
-    distance: '3.5 km',
-    status: 'Đang mở cửa',
-    time: '07:00 - 23:00',
-    phone: '024 8765 4321',
-    image: require('../../assets/images/nen2.png'),
-    amenities: ['Wifi miễn phí', 'Có chỗ đỗ ô tô', 'Khu vực hút thuốc'],
-    // URL Nhúng bản đồ thật của khu vực 89 Cầu Giấy
-    mapEmbedUrl: 'https://maps.google.com/maps?q=89+Cầu+Giấy,+Quan+Hoa,+Hà+Nội&hl=vi&z=16&output=embed',
-    lat: 21.031589,
-    lng: 105.799014,
-  },
-  {
-    id: '3',
-    name: 'True Juice Hai Bà Trưng',
-    address: '45 Hai Bà Trưng, Hoàn Kiếm, Hà Nội',
-    distance: '5.1 km',
-    status: 'Đang mở cửa',
-    time: '08:00 - 21:00',
-    phone: '024 9999 8888',
-    image: require('../../assets/images/nen3.png'),
-    amenities: ['View đẹp', 'Thanh toán thẻ', 'Gần phố đi bộ'],
-    mapEmbedUrl: 'https://maps.google.com/maps?q=45+Hai+Bà+Trưng,+Hoàn+Kiếm,+Hà+Nội&hl=vi&z=16&output=embed',
-    lat: 21.026364,
-    lng: 105.850231,
-  },
-  {
-    id: '4',
-    name: 'True Juice Ba Đình',
-    address: '78 Quán Thánh, Ba Đình, Hà Nội',
-    distance: '2.8 km',
-    status: 'Đang mở cửa',
-    time: '07:00 - 22:00',
-    phone: '024 5555 6666',
-    image: require('../../assets/images/nen4.png'),
-    amenities: ['Wifi miễn phí', 'Không gian rộng', 'Nhạc sống'],
-    mapEmbedUrl: 'https://maps.google.com/maps?q=78+Quán+Thánh,+Ba+Đình,+Hà+Nội&hl=vi&z=16&output=embed',
-    lat: 21.049267,
-    lng: 105.833740,
-  },
-  {
-    id: '5',
-    name: 'True Juice Hoàng Mai',
-    address: '120 Giải Phóng, Hoàng Mai, Hà Nội',
-    distance: '6.2 km',
-    status: 'Đang mở cửa',
-    time: '07:30 - 21:30',
-    phone: '024 7777 8888',
-    image: require('../../assets/images/nen5.png'),
-    amenities: ['Chỗ để xe máy', 'Thanh toán thẻ', 'Nước lạnh'],
-    mapEmbedUrl: 'https://maps.google.com/maps?q=120+Giải+Phóng,+Hoàng+Mai,+Hà+Nội&hl=vi&z=16&output=embed',
-    lat: 21.008667,
-    lng: 105.881001,
-  },
-  {
-    id: '6',
-    name: 'True Juice Thanh Xuân',
-    address: '250 Trần Duy Hưng, Thanh Xuân, Hà Nội',
-    distance: '4.5 km',
-    status: 'Đang mở cửa',
-    time: '07:00 - 23:00',
-    phone: '024 3333 4444',
-    image: require('../../assets/images/nen6.png'),
-    amenities: ['Wifi miễn phí', 'Chỗ đỗ ô tô', 'Ghế thoải mái'],
-    mapEmbedUrl: 'https://maps.google.com/maps?q=250+Trần+Duy+Hưng,+Thanh+Xuân,+Hà+Nội&hl=vi&z=16&output=embed',
-    lat: 21.026122,
-    lng: 105.793892,
-  }
-];
-
 const StoreScreen = ({ navigation, route }) => {
   // Mock fallback cho Theme Context nếu bạn chưa cấu hình hoàn chỉnh
   const { isDarkMode = false, colors = { background: '#FAFAFA', accent: ORANGE_COLOR } } = useAppTheme?.() || {};
@@ -134,6 +45,29 @@ const StoreScreen = ({ navigation, route }) => {
   const [myReservations, setMyReservations] = useState([]);
   const [isSearchVisible, setIsSearchVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [stores, setStores] = useState([]);
+  const [storesLoading, setStoresLoading] = useState(true);
+  const [storesError, setStoresError] = useState('');
+
+  const loadStores = async (signal) => {
+    setStoresLoading(true);
+    setStoresError('');
+    try {
+      const data = await fetchStores({ signal });
+      if (!signal?.aborted) setStores(data);
+    } catch (error) {
+      if (!signal?.aborted) setStoresError(error.message || 'Không thể tải thông tin cửa hàng.');
+    } finally {
+      if (!signal?.aborted) setStoresLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadStores(controller.signal);
+    return () => controller.abort();
+  }, []);
+
 
   const ui = {
     containerBg: isDarkMode ? colors.background : '#FAFAFA',
@@ -152,7 +86,7 @@ const StoreScreen = ({ navigation, route }) => {
     searchPlaceholder: isDarkMode ? '#A9A9A9' : '#6B7280',
   };
 
-  const filteredStores = mockStores.filter((store) => {
+  const filteredStores = stores.filter((store) => {
     const keyword = searchQuery.trim().toLowerCase();
     if (!keyword) return true;
     return (
@@ -356,7 +290,7 @@ const StoreScreen = ({ navigation, route }) => {
       <View style={styles.storeInfo}>
         <View style={styles.titleRow}>
           <Text style={[styles.storeName, { color: ui.cardText }]} numberOfLines={1}>{item.name}</Text>
-          <Text style={[styles.distanceText, { color: colors.accent || ORANGE_COLOR }]}>{item.distance}</Text>
+          <Text style={[styles.distanceText, { color: colors.accent || ORANGE_COLOR }]}>Giờ: {item.time}</Text>
         </View>
         
         <Text style={[styles.storeAddress, { color: ui.cardSubText }]} numberOfLines={2}>{item.address}</Text>
@@ -430,7 +364,7 @@ const StoreScreen = ({ navigation, route }) => {
 
       {/* DANH SÁCH CỬA HÀNG */}
         <View style={styles.listWrapper}>
-          <Text style={[styles.listTitle, { color: ui.headerText }]}>Cửa hàng gần bạn</Text>
+          <Text style={[styles.listTitle, { color: ui.headerText }]}>Chi nhánh True Juice</Text>
           <FlatList
             data={filteredStores}
             keyExtractor={(item) => item.id}
@@ -439,7 +373,14 @@ const StoreScreen = ({ navigation, route }) => {
             showsVerticalScrollIndicator={true}
             scrollEnabled={true}
             nestedScrollEnabled={true}
-            ListEmptyComponent={<Text style={[styles.emptySearchText, { color: ui.cardSubText }]}>Không tìm thấy cửa hàng phù hợp.</Text>}
+            ListEmptyComponent={storesLoading ? <ActivityIndicator style={{ marginTop: 20 }} color={colors.accent || ORANGE_COLOR} accessibilityLabel="Đang tải cửa hàng" /> : (
+              <View>
+                <Text style={[styles.emptySearchText, { color: ui.cardSubText }]}>{storesError || 'Không tìm thấy cửa hàng phù hợp.'}</Text>
+                {storesError ? <TouchableOpacity onPress={() => loadStores()} accessibilityRole="button" style={{ alignItems: 'center', padding: 12 }}>
+                  <Text style={{ color: colors.accent || ORANGE_COLOR, fontWeight: '700' }}>Thử lại</Text>
+                </TouchableOpacity> : null}
+              </View>
+            )}
           />
         </View>
 
@@ -535,7 +476,7 @@ const StoreScreen = ({ navigation, route }) => {
                   })}
                 </View>
 
-                <Text style={[styles.sectionLabel, { color: ui.modalText }]}>Sơ đồ bàn (Trống/Hết)</Text>
+                <Text style={[styles.sectionLabel, { color: ui.modalText }]}>Sơ đồ bàn mô phỏng (Trống/Hết)</Text>
                 <View style={styles.tablesGrid}>
                   {tableNumbers.map((tableNo) => {
                     const available = checkTableAvailable(selectedStore.id, selectedTimeSlot, tableNo);

@@ -1,3 +1,4 @@
+import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -9,7 +10,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   Dimensions,
   Animated,
   StatusBar,
@@ -88,7 +88,7 @@ const MagicalBackground = () => {
       size={10 + Math.random() * 15} 
     />
   ));
-  return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{stars}</View>;
+  return <View style={StyleSheet.absoluteFill} pointerEvents="none">{stars}</View>;
 };
 
 
@@ -194,7 +194,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
         
         {/* Nền ảnh máy pha cà phê sang trọng */}
-        <ImageBackground
+        <BackgroundImage
           source={{ uri: 'https://images.unsplash.com/photo-1511920170033-f8396924c348?q=80&w=800&auto=format&fit=crop' }}
           style={styles.backgroundImage}
         >
@@ -317,7 +317,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
               </Animated.View>
             </KeyboardAvoidingView>
           </SafeAreaView>
-        </ImageBackground>
+        </BackgroundImage>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -332,7 +332,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(20, 15, 10, 0.75)', // Nền tối ám chút nâu đen
   },
   header: {

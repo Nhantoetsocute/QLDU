@@ -38,3 +38,6 @@ android/app/build/
 ios/build/
 backend/dist/
 coverage/
+node_modules
+node_modules
+node_modules

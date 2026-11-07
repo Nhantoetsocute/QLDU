@@ -1,3 +1,4 @@
+import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
@@ -9,7 +10,6 @@ import {
   Image,
   Animated,
   StatusBar,
-  ImageBackground,
   ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
@@ -224,7 +224,7 @@ const OrderHistoryScreen = ({ navigation, route }) => {
     <View style={[styles.container, { backgroundColor: colors.background }] }>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
       
-      <ImageBackground
+      <BackgroundImage
         source={{ uri: 'https://images.unsplash.com/photo-1514432324607-a2c522b4ae12?q=80&w=800' }}
         style={styles.backgroundImage}
       >
@@ -286,7 +286,7 @@ const OrderHistoryScreen = ({ navigation, route }) => {
             )}
           />
         </SafeAreaView>
-      </ImageBackground>
+      </BackgroundImage>
     </View>
   );
 };
@@ -294,7 +294,7 @@ const OrderHistoryScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0A0A0A' },
   backgroundImage: { flex: 1, resizeMode: 'cover' },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 15, 15, 0.92)' }, // Tối và mịn hơn
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15, 15, 15, 0.92)' }, // Tối và mịn hơn
   
   // Header
   header: {

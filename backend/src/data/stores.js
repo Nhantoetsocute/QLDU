@@ -1,0 +1,80 @@
+// Branch information migrated from the existing True Juice app.
+// Opening hours describe the published schedule, not live branch/table availability.
+const stores = [
+  {
+    id: '1',
+    name: 'True Juice Thái Hà',
+    address: '12 Thái Hà, Trung Liệt, Đống Đa, Hà Nội',
+    time: '07:00 - 22:30',
+    phone: '024 1234 5678',
+    photoKey: 'nen1.png',
+    amenities: ['Wifi miễn phí', 'Chỗ để xe máy', 'Thanh toán thẻ'],
+    // URL Nhúng bản đồ thật của khu vực 12 Thái Hà
+    mapEmbedUrl: 'https://maps.google.com/maps?q=12+Thái+Hà,+Đống+Đa,+Hà+Nội&hl=vi&z=16&output=embed',
+    lat: 21.011311,
+    lng: 105.819779,
+  },
+  {
+    id: '2',
+    name: 'True Juice Cầu Giấy',
+    address: '89 Cầu Giấy, Quan Hoa, Cầu Giấy, Hà Nội',
+    time: '07:00 - 23:00',
+    phone: '024 8765 4321',
+    photoKey: 'nen2.png',
+    amenities: ['Wifi miễn phí', 'Có chỗ đỗ ô tô', 'Khu vực hút thuốc'],
+    // URL Nhúng bản đồ thật của khu vực 89 Cầu Giấy
+    mapEmbedUrl: 'https://maps.google.com/maps?q=89+Cầu+Giấy,+Quan+Hoa,+Hà+Nội&hl=vi&z=16&output=embed',
+    lat: 21.031589,
+    lng: 105.799014,
+  },
+  {
+    id: '3',
+    name: 'True Juice Hai Bà Trưng',
+    address: '45 Hai Bà Trưng, Hoàn Kiếm, Hà Nội',
+    time: '08:00 - 21:00',
+    phone: '024 9999 8888',
+    photoKey: 'nen3.png',
+    amenities: ['View đẹp', 'Thanh toán thẻ', 'Gần phố đi bộ'],
+    mapEmbedUrl: 'https://maps.google.com/maps?q=45+Hai+Bà+Trưng,+Hoàn+Kiếm,+Hà+Nội&hl=vi&z=16&output=embed',
+    lat: 21.026364,
+    lng: 105.850231,
+  },
+  {
+    id: '4',
+    name: 'True Juice Ba Đình',
+    address: '78 Quán Thánh, Ba Đình, Hà Nội',
+    time: '07:00 - 22:00',
+    phone: '024 5555 6666',
+    photoKey: 'nen4.png',
+    amenities: ['Wifi miễn phí', 'Không gian rộng', 'Nhạc sống'],
+    mapEmbedUrl: 'https://maps.google.com/maps?q=78+Quán+Thánh,+Ba+Đình,+Hà+Nội&hl=vi&z=16&output=embed',
+    lat: 21.049267,
+    lng: 105.833740,
+  },
+  {
+    id: '5',
+    name: 'True Juice Hoàng Mai',
+    address: '120 Giải Phóng, Hoàng Mai, Hà Nội',
+    time: '07:30 - 21:30',
+    phone: '024 7777 8888',
+    photoKey: 'nen5.png',
+    amenities: ['Chỗ để xe máy', 'Thanh toán thẻ', 'Nước lạnh'],
+    mapEmbedUrl: 'https://maps.google.com/maps?q=120+Giải+Phóng,+Hoàng+Mai,+Hà+Nội&hl=vi&z=16&output=embed',
+    lat: 21.008667,
+    lng: 105.881001,
+  },
+  {
+    id: '6',
+    name: 'True Juice Thanh Xuân',
+    address: '250 Trần Duy Hưng, Thanh Xuân, Hà Nội',
+    time: '07:00 - 23:00',
+    phone: '024 3333 4444',
+    photoKey: 'nen6.png',
+    amenities: ['Wifi miễn phí', 'Chỗ đỗ ô tô', 'Ghế thoải mái'],
+    mapEmbedUrl: 'https://maps.google.com/maps?q=250+Trần+Duy+Hưng,+Thanh+Xuân,+Hà+Nội&hl=vi&z=16&output=embed',
+    lat: 21.026122,
+    lng: 105.793892,
+  }
+];
+
+module.exports = stores;

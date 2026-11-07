@@ -8,7 +8,7 @@
 -- Ngày tạo: 21/04/2026
 -- =============================================
 
-DROP DATABASE IF EXISTS QuanLyBanNuoc;
+
 
 CREATE DATABASE QuanLyBanNuoc
   CHARACTER SET utf8mb4

@@ -10,6 +10,9 @@ const voucherRoutes = require('./src/routes/voucherRoutes');
 const cartRoutes = require('./src/routes/cartRoutes');
 const orderRoutes = require('./src/routes/orderRoutes');
 const vnpayRoutes = require('./src/routes/vnpayRoutes');
+const chatRoutes = require('./src/routes/chatRoutes');
+const catalogRoutes = require('./src/routes/catalogRoutes');
+const storeRoutes = require('./src/routes/storeRoutes');
 
 const path = require('path');
 
@@ -51,6 +54,9 @@ app.use('/api/vouchers', voucherRoutes); // /api/vouchers
 app.use('/api/cart', cartRoutes);     // /api/cart
 app.use('/api/orders', orderRoutes);  // /api/orders
 app.use('/api/vnpay', vnpayRoutes);   // /api/vnpay/create-payment-url, /api/vnpay/return
+app.use('/api/chat', chatRoutes);
+app.use('/api/catalog', catalogRoutes);
+app.use('/api/stores', storeRoutes);
 app.use('/api', foodRoutes);          // /api/food, /api/categories
 
 // ======== HEALTH CHECK ========

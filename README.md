@@ -1,6 +1,8 @@
 # QuanLyBanNuoc (QLDU)
 
 Ứng dụng quản lý bán nước — React Native (Expo) + Node.js Express + MySQL.
+
+Chatbot tư vấn dùng Google Gemini và chạy trực tiếp trong Expo Go. Xem [hướng dẫn cấu hình, chạy và kiểm thử chatbot](docs/GEMINI_CHATBOT.md).
 ## Thành viên nhóm
 
 | STT | Họ và tên | MSSV |
@@ -14,7 +16,7 @@
 
 | Công cụ        | Phiên bản       | Ghi chú                        |
 | -------------- | --------------- | ------------------------------ |
-| **Node.js**    | ≥ 18            | [nodejs.org](https://nodejs.org) |
+| **Node.js**    | 24 LTS            | [nodejs.org](https://nodejs.org); xem `.nvmrc` |
 | **MySQL**      | ≥ 8.0           | Có sẵn trong XAMPP             |
 | **XAMPP**      | Bất kì          | Bật Apache + MySQL             |
 | **Expo CLI**   | Cài qua npx     | Không cần cài global           |
@@ -67,6 +69,11 @@ npm start
 ```
 
 Scan QR code bằng app **Expo Go** trên điện thoại (cùng mạng WiFi với máy tính).
+
+Dự án dùng Expo SDK 58. Dùng Expo Go hỗ trợ SDK 58 trên điện thoại.
+Chạy `npm start` để hiện QR cho Expo Go qua mạng LAN và xóa cache cũ.
+Lệnh tự ưu tiên Node 24 đã cài tại `/private/tmp/qldu-node24/node_modules/.bin`
+trên máy này; trên máy khác, cần cài Node 24 và thêm vào PATH.
 
 ---
 
