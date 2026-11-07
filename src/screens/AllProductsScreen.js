@@ -1,3 +1,4 @@
+import BackgroundImage from '../components/BackgroundImage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
@@ -10,49 +11,62 @@ import {
   Animated,
   StatusBar,
   TextInput,
-  ImageBackground,
   TouchableWithoutFeedback,
   Keyboard,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useCart } from '../context/CartContext';
+import { fetchCatalog } from '../services/catalog';
 
 const { width } = Dimensions.get('window');
 
-// --- DỮ LIỆU DANH MỤC ĐỒ UỐNG ---
-const drinkCategories = [
-  { id: 'all', name: 'Tất cả', icon: 'view-grid' },
-  { id: 'tea', name: 'Trà', icon: 'leaf' },
-  { id: 'coffee', name: 'Cà Phê', icon: 'coffee' },
-  { id: 'juice', name: 'Nước Ép', icon: 'fruit-cherries' },
-  { id: 'milk', name: 'Sữa', icon: 'cow' },
-  { id: 'soda', name: 'Giải Khát', icon: 'cup' },
-  { id: 'nutri', name: 'Dinh Dưỡng', icon: 'flash' },
-];
-
-const allDrinks = [
-  // --- Sản phẩm đồng bộ với HomeScreen ---
-  { id: '1', name: 'Nước ép rau má', price: 120000, tag: 'New', image: require('../../assets/images/rauma.jpg'), category: 'juice', description: 'Rau má tươi xay lạnh cùng chút đường phèn thanh nhẹ, giúp giải nhiệt và làm dịu cơ thể trong ngày nắng.' },
-  { id: '2', name: 'Trà đào cam sả', price: 55000, tag: 'Signature', image: require('../../assets/images/tra_cam_xa.jpg'), category: 'tea', description: 'Sự kết hợp của trà đen ủ đậm, đào ngọt dịu, cam mọng nước và hương sả thơm mát, cân bằng chua ngọt.' },
-  { id: '3', name: 'Trà Chanh', price: 35000, tag: 'Popular', image: require('../../assets/images/tra_chanh.webp'), category: 'tea', description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì.' },
-  { id: '4', name: 'Trà Xanh', price: 40000, tag: 'Classic', image: require('../../assets/images/tra_xanh.jpg'), category: 'tea', description: 'Trà xanh nguyên lá với hậu vị dịu và hương thơm tự nhiên, phù hợp cho người thích vị trà thuần khiết.' },
-  { id: '5', name: 'Cà phê sữa đá', price: 29000, tag: 'Best Seller', image: require('../../assets/images/CPSD.webp'), category: 'coffee', description: 'Cà phê pha phin truyền thống thơm lừng kết hợp cùng sữa đặc béo ngậy.' },
-  // --- Sản phẩm mở rộng ---
-  { id: '6', name: 'Nước Ion Kiềm Cao Cấp', price: 25000, tag: 'Pure', image: require('../../assets/images/ion.png'), category: 'nutri', description: 'Nước ion kiềm tinh lọc với vị mềm nhẹ, hỗ trợ bù khoáng và làm dịu cơ thể sau vận động.' },
-  { id: '7', name: 'Soda Mix Dâu Rừng', price: 45000, tag: 'Fresh', image: require('../../assets/images/soda.jpg'), category: 'soda', description: 'Soda mát lạnh kết hợp siro dâu rừng thơm ngọt, tạo cảm giác sủi tê vui miệng và trẻ trung.' },
-  { id: '8', name: 'Sữa Hạnh Nhân Organic', price: 65000, tag: 'Healthy', image: require('../../assets/images/sua.jpg'), category: 'milk', description: 'Sữa hạnh nhân nguyên chất, béo nhẹ tự nhiên, không ngấy, phù hợp cho lối sống lành mạnh.' },
-  { id: '9', name: 'Nước Ép Cam Tươi', price: 55000, tag: 'Vitamin', image: require('../../assets/images/cam.png'), category: 'juice', description: 'Cam tươi ép tại quầy giữ trọn vị chua ngọt tự nhiên và hương thơm mọng nước giàu vitamin C.' },
-  { id: '10', name: 'Protein Shake Socola', price: 85000, tag: 'Energy', image: require('../../assets/images/protein.jpeg'), category: 'nutri', description: 'Protein shake vị socola đậm đà, tăng năng lượng nhanh, thích hợp trước hoặc sau khi tập luyện.' },
-  { id: '11', name: 'Matcha Latte', price: 60000, tag: 'Seasonal', image: require('../../assets/images/matcha.jpg'), category: 'tea', description: 'Trà xanh matcha nguyên chất kết hợp sữa tươi béo ngậy, hương vị thanh mát và tinh tế.' },
-];
+const categoryIcon = (name) => {
+  const normalized = String(name).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  if (normalized.includes('tra')) return 'leaf';
+  if (normalized.includes('phe')) return 'coffee';
+  if (normalized.includes('ep')) return 'fruit-cherries';
+  if (normalized.includes('sua')) return 'cow';
+  if (normalized.includes('dinh')) return 'flash';
+  return 'cup';
+};
 
 const AllProductsScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const { addToCart } = useCart();
+  const [allDrinks, setAllDrinks] = useState([]);
+  const [drinkCategories, setDrinkCategories] = useState([{ id: 'all', name: 'Tất cả', icon: 'view-grid' }]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
+
+  const loadProducts = async (signal) => {
+    setCatalogLoading(true);
+    setCatalogError('');
+    try {
+      const { products, categories } = await fetchCatalog({ signal });
+      if (signal?.aborted) return;
+      setAllDrinks(products);
+      setDrinkCategories([
+        { id: 'all', name: 'Tất cả', icon: 'view-grid' },
+        ...categories.map((category) => ({ id: String(category.id), name: category.name, icon: categoryIcon(category.name) })),
+      ]);
+    } catch (error) {
+      if (!signal?.aborted) setCatalogError(error.message || 'Không thể tải sản phẩm.');
+    } finally {
+      if (!signal?.aborted) setCatalogLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadProducts(controller.signal);
+    return () => controller.abort();
+  }, []);
+
   const ui = {
     headerBg: isDarkMode ? 'rgba(20,20,20,0.7)' : 'rgba(255,255,255,0.78)',
     cardBg: isDarkMode ? 'rgba(255,255,255,0.05)' : 'rgba(248,250,252,0.94)',
@@ -81,7 +95,7 @@ const AllProductsScreen = ({ navigation }) => {
   }, []);
 
   const filteredDrinks = allDrinks
-    .filter((d) => selectedCat === 'all' || d.category === selectedCat)
+    .filter((d) => selectedCat === 'all' || String(d.categoryId) === selectedCat)
     .filter((d) => d.name.toLowerCase().includes(searchText.trim().toLowerCase()));
 
   const addItemToCart = (item) => {
@@ -90,6 +104,7 @@ const AllProductsScreen = ({ navigation }) => {
 
     addToCart({
       id: item.id,
+      productId: item.productId,
       name: item.name,
       price: numericPrice,
       image: item.image,
@@ -171,7 +186,7 @@ const AllProductsScreen = ({ navigation }) => {
       <View style={[styles.container, { backgroundColor: colors.background }]}> 
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent />
 
-      <ImageBackground
+      <BackgroundImage
         source={{ uri: 'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?q=80&w=800' }}
         style={styles.bg}
       >
@@ -248,10 +263,17 @@ const AllProductsScreen = ({ navigation }) => {
           style={{ opacity: fadeAnim }}
           renderItem={renderDrinkCard}
           ListEmptyComponent={
-            <Text style={[styles.emptyText, { color: ui.textSecondary }]}>Không tìm thấy sản phẩm phù hợp</Text>
+            catalogLoading ? <ActivityIndicator style={{ marginTop: 30 }} color={colors.accent} accessibilityLabel="Đang tải sản phẩm" /> : (
+              <View style={{ padding: 20 }}>
+                <Text style={[styles.emptyText, { color: ui.textSecondary }]}>{catalogError || 'Không tìm thấy sản phẩm phù hợp'}</Text>
+                {catalogError ? <TouchableOpacity onPress={() => loadProducts()} accessibilityRole="button" style={{ alignItems: 'center', padding: 12 }}>
+                  <Text style={{ color: colors.accent, fontWeight: '700' }}>Thử lại</Text>
+                </TouchableOpacity> : null}
+              </View>
+            )
           }
         />
-      </ImageBackground>
+      </BackgroundImage>
 
       {toastMessage ? (
         <Animated.View
@@ -283,7 +305,7 @@ const AllProductsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
   bg: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.85)' },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(0,0,0,0.85)' },
   safeHeader: { backgroundColor: 'rgba(20,20,20,0.7)', borderBottomWidth: 1, borderBottomColor: 'rgba(212,175,55,0.2)' },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, paddingTop: 10 },
   headerTitle: { fontSize: 22, fontWeight: '800', color: '#D4AF37', letterSpacing: 1 },

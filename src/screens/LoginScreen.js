@@ -1,3 +1,4 @@
+import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -7,7 +8,6 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   StyleSheet,
-  ImageBackground,
   Dimensions,
   Animated,
   StatusBar,
@@ -71,7 +71,7 @@ const FallingBlossoms = React.memo(() => {
   const petals = Array.from({ length: 20 }).map((_, i) => (
     <Petal key={i} delay={Math.random() * 5000} startX={Math.random() * width} />
   ));
-  return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{petals}</View>;
+  return <View style={StyleSheet.absoluteFill} pointerEvents="none">{petals}</View>;
 });
 
 const LoginScreen = ({ navigation }) => {
@@ -128,7 +128,7 @@ const LoginScreen = ({ navigation }) => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-        <ImageBackground
+        <BackgroundImage
           source={require('../../assets/images/tra_cam_xa.jpg')}
           style={styles.backgroundImage}
         >
@@ -193,7 +193,7 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </ImageBackground>
+        </BackgroundImage>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -202,7 +202,7 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backgroundImage: { flex: 1, resizeMode: 'cover' },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(10, 10, 10, 0.65)' },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(10, 10, 10, 0.65)' },
   contentContainer: { flex: 1, justifyContent: 'center', paddingHorizontal: 25 },
   headerContainer: { alignItems: 'center', marginBottom: 40 },
   brandName: { fontSize: 36, fontWeight: '800', color: '#D4AF37', letterSpacing: 3, textShadowColor: 'rgba(212, 175, 55, 0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },

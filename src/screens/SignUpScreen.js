@@ -1,3 +1,4 @@
+import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -7,7 +8,6 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   StyleSheet,
-  ImageBackground,
   Dimensions,
   Animated,
   StatusBar,
@@ -85,7 +85,7 @@ const FloatingGoldDust = React.memo(() => {
       size={2 + Math.random() * 4} 
     />
   ));
-  return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{particles}</View>;
+  return <View style={StyleSheet.absoluteFill} pointerEvents="none">{particles}</View>;
 });
 
 const SignUpScreen = ({ navigation }) => {
@@ -149,7 +149,7 @@ const SignUpScreen = ({ navigation }) => {
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <View style={[styles.container, { backgroundColor: colors.background }]}> 
         <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-        <ImageBackground
+        <BackgroundImage
           source={require('../../assets/images/tra_chanh.webp')}
           style={styles.backgroundImage}
         >
@@ -254,7 +254,7 @@ const SignUpScreen = ({ navigation }) => {
             </View>
             </ScrollView>
           </KeyboardAvoidingView>
-        </ImageBackground>
+        </BackgroundImage>
       </View>
     </TouchableWithoutFeedback>
   );
@@ -263,7 +263,7 @@ const SignUpScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   backgroundImage: { flex: 1, resizeMode: 'cover' },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(15, 15, 15, 0.75)' },
+  overlay: { ...StyleSheet.absoluteFill, backgroundColor: 'rgba(15, 15, 15, 0.75)' },
   scrollContent: { flexGrow: 1, paddingHorizontal: 25, paddingTop: 50, paddingBottom: 40 },
   backButton: { marginTop: 10, marginBottom: 20, marginLeft: -10, width: 40 },
   headerContainer: { marginBottom: 35 },

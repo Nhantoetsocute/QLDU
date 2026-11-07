@@ -41,7 +41,9 @@ exports.getFoods = async (req, res) => {
         sql += " ORDER BY f.FoodName LIMIT ? OFFSET ?";
         params.push(parseInt(limit), offset);
 
-        const [rows] = await pool.execute(sql, params);
+        // Use escaped query parameters: some MySQL versions reject numeric
+        // LIMIT/OFFSET parameters in the prepared-statement protocol.
+        const [rows] = await pool.query(sql, params);
         res.json(rows);
     } catch (error) {
         console.error('GetFoods error:', error.message);

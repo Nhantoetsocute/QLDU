@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from 'react';
+import BackgroundImage from '../components/BackgroundImage';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -10,15 +11,16 @@ import {
   FlatList,
   Animated,
   StatusBar,
-  ImageBackground,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useCart } from '../context/CartContext';
+import { fetchCatalog } from '../services/catalog';
 
 const { width, height } = Dimensions.get('window');
 
@@ -83,7 +85,7 @@ const AmbientSparkles = React.memo(() => {
       size={1 + Math.random() * 3}
     />
   ));
-  return <View style={StyleSheet.absoluteFillObject} pointerEvents="none">{sparkles}</View>;
+  return <View style={StyleSheet.absoluteFill} pointerEvents="none">{sparkles}</View>;
 });
 
 // --- DỮ LIỆU MẪU (Mock Data - Phiên bản cao cấp) ---
@@ -94,72 +96,39 @@ const categories = [
   { id: '4', name: 'Đổi quà', icon: 'seed-outline', type: 'material', offerCategory: 'redeem' },
 ];
 
-const premiumProducts = [
-  {
-    id: 1,
-    name: 'Nước ép rau má',
-    price: 120000,
-    image: require('../../assets/images/rauma.jpg'),
-    description: 'Rau má tươi xay lạnh cùng chút đường phèn thanh nhẹ, giúp giải nhiệt và làm dịu cơ thể trong ngày nắng.',
-  },
-  {
-    id: 2,
-    name: 'Trà đào cam sả',
-    price: 55000,
-    image: require('../../assets/images/tra_cam_xa.jpg'),
-    description: 'Sự kết hợp của trà đen ủ đậm, đào ngọt dịu, cam mọng nước và hương sả thơm mát, cân bằng chua ngọt.',
-  },
-  {
-    id: 3,
-    name: 'Trà Chanh',
-    price: 35000,
-    image: require('../../assets/images/tra_chanh.webp'),
-    description: 'Vị trà thanh nhẹ hòa cùng chanh tươi và đá lạnh, mang cảm giác sảng khoái tức thì, dễ uống mọi thời điểm.',
-  },
-  {
-    id: 4,
-    name: 'Trà Xanh',
-    price: 40000,
-    image: require('../../assets/images/tra_xanh.jpg'),
-    description: 'Trà xanh nguyên lá với hậu vị dịu và hương thơm tự nhiên, phù hợp cho người thích vị trà thuần khiết.',
-  },
-  {
-    id: 5,
-    name: 'Cà phê sữa đá',
-    price: 29000,
-    image: require('../../assets/images/CPSD.webp'),
-    description: 'Cà phê pha phin truyền thống thơm lừng kết hợp cùng sữa đặc béo ngậy.',
-  },
-];
-
-const heroBanners = [
-  {
-    id: 2,
-    badge: 'SIGNATURE',
-    title: 'Trà đào cam sả',
-    subtitle: 'Sự kết hợp hoàn hảo giữa trà đen và trái cây tươi.',
-    image: require('../../assets/images/tra_cam_xa.jpg'),
-  },
-  {
-    id: 5,
-    badge: 'BEST SELLER',
-    title: 'Cà phê sữa đá',
-    subtitle: 'Hương vị tuổi trẻ, đậm đà nhưng ngọt bùi.',
-    image: require('../../assets/images/CPSD.webp'),
-  },
-  {
-    id: 1,
-    badge: 'NEW',
-    title: 'Nước ép rau má',
-    subtitle: 'Thanh mát cơ thể ngày hè nóng nực.',
-    image: require('../../assets/images/rauma.jpg'),
-  },
-];
 
 const HomeScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const { profile, logoutContext, avatarUri } = useUserProfile();
   const { cartItems, addToCart } = useCart();
+  const [premiumProducts, setPremiumProducts] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState('');
+
+  const loadProducts = async (signal) => {
+    setCatalogLoading(true);
+    setCatalogError('');
+    try {
+      const { products } = await fetchCatalog({ signal });
+      if (!signal?.aborted) setPremiumProducts(products);
+    } catch (error) {
+      if (!signal?.aborted) setCatalogError(error.message || 'Không thể tải sản phẩm.');
+    } finally {
+      if (!signal?.aborted) setCatalogLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const controller = new AbortController();
+    loadProducts(controller.signal);
+    return () => controller.abort();
+  }, []);
+
+  const heroBanners = [2, 5, 1]
+    .map((id) => premiumProducts.find((product) => Number(product.id) === id))
+    .filter(Boolean)
+    .map((product) => ({ ...product, title: product.name, subtitle: product.description, badge: product.categoryName }));
+
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -202,7 +171,7 @@ const HomeScreen = ({ navigation }) => {
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
 
       {/* Background tối sang trọng */}
-      <ImageBackground
+      <BackgroundImage
         source={{ uri: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?q=80&w=800&auto=format&fit=crop' }}
         style={styles.backgroundImage}
       >
@@ -279,6 +248,16 @@ const HomeScreen = ({ navigation }) => {
         </SafeAreaView>
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+          {catalogLoading ? (
+            <ActivityIndicator style={{ marginVertical: 20 }} color={colors.accent} accessibilityLabel="Đang tải sản phẩm" />
+          ) : catalogError ? (
+            <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
+              <Text style={{ color: ui.textSecondary, marginBottom: 10 }}>{catalogError}</Text>
+              <TouchableOpacity onPress={() => loadProducts()} accessibilityRole="button">
+                <Text style={{ color: colors.accent, fontWeight: '700' }}>Thử tải lại sản phẩm</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
 
           {/* HERO SECTION: BANNER TRƯỢT */}
           <View style={styles.heroSection}>
@@ -292,8 +271,8 @@ const HomeScreen = ({ navigation }) => {
               contentContainerStyle={{ paddingLeft: 20, paddingRight: 0 }}
               renderItem={({ item }) => (
                 <View style={{ width: width - 40, marginRight: 20 }}>
-                  <ImageBackground
-                    source={item.image}
+                  <BackgroundImage
+                    source={typeof item.image === 'string' ? { uri: item.image } : item.image}
                     style={styles.heroImageCard}
                     imageStyle={{ borderRadius: 24 }}
                   >
@@ -318,7 +297,7 @@ const HomeScreen = ({ navigation }) => {
                         </TouchableOpacity>
                       </View>
                     </View>
-                  </ImageBackground>
+                  </BackgroundImage>
                 </View>
               )}
             />
@@ -351,7 +330,7 @@ const HomeScreen = ({ navigation }) => {
                 style={[styles.premiumCard, { backgroundColor: ui.cardBg, borderColor: ui.cardBorder }]}
                 onPress={() => navigation.navigate('ProductDetail', { item: item })}
               >
-                <Image source={item.image} style={styles.premiumImage} />
+                <Image source={typeof item.image === 'string' ? { uri: item.image } : item.image} style={styles.premiumImage} />
                 <View style={styles.premiumInfo}>
                   <Text style={[styles.premiumName, { color: ui.textPrimary }]} numberOfLines={2}>{item.name}</Text>
                   <View style={styles.premiumBottomRow}>
@@ -365,6 +344,7 @@ const HomeScreen = ({ navigation }) => {
                           Number(String(item.price || '').replace(/đ/gi, '').replace(/\./g, '').replace(/,/g, '').trim()) || 0;
                         addToCart({
                           id: item.id,
+                          productId: item.productId,
                           name: item.name,
                           price: numericPrice,
                           image: item.image,
@@ -384,7 +364,7 @@ const HomeScreen = ({ navigation }) => {
           </View>
 
         </ScrollView>
-      </ImageBackground>
+      </BackgroundImage>
     </View>
   );
 };
@@ -399,7 +379,7 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   overlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(10, 10, 10, 0.85)', // Tối sâu để làm nền
   },
   scrollContent: {

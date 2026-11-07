@@ -1,3 +1,4 @@
+import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -7,7 +8,6 @@ import {
   TouchableOpacity,
   Animated,
   StatusBar,
-  ImageBackground,
   Dimensions,
   Platform,
 } from 'react-native';
@@ -186,7 +186,7 @@ const OffersScreen = ({ navigation, route }) => {
   return (
     <View style={[styles.container, { backgroundColor: ui.screenBg }]}>
       <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} translucent backgroundColor="transparent" />
-      <ImageBackground 
+      <BackgroundImage
         source={{ uri: 'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=800' }} 
         style={styles.bg}
       >
@@ -246,7 +246,7 @@ const OffersScreen = ({ navigation, route }) => {
             }
           />
         </SafeAreaView>
-      </ImageBackground>
+      </BackgroundImage>
     </View>
   );
 };
@@ -254,7 +254,7 @@ const OffersScreen = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   bg: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject },
+  overlay: { ...StyleSheet.absoluteFill },
   
   header: { 
     flexDirection: 'row', 
