@@ -3,7 +3,10 @@ import { View, StyleSheet, ActivityIndicator, Alert, SafeAreaView, Text, Touchab
 import { WebView } from 'react-native-webview';
 import { useUserProfile } from '../context/UserProfileContext';
 import { useCart } from '../context/CartContext';
-import { apiUrl } from '../config/api';
+import { apiUrl, BASE_URL } from '../config/api';
+import { paymentDetails, isPaymentNavigationAllowed, isPaymentReturn } from '../config/paymentTransport';
+
+const transportOptions = { apiBase: BASE_URL, development: typeof __DEV__ !== 'undefined' && __DEV__ };
 
 const VNPayScreen = ({ route, navigation }) => {
   const {
@@ -24,6 +27,9 @@ const VNPayScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const hasHandledResult = useRef(false);
+  const paymentOrder = useRef(null);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   useEffect(() => {
     const createPaymentUrl = async () => {
@@ -52,7 +58,9 @@ const VNPayScreen = ({ route, navigation }) => {
           throw new Error(data?.message || 'Không lấy được link thanh toán VNPAY');
         }
 
-        setPaymentUrl(data.paymentUrl.trim());
+        const payment = paymentDetails(data, transportOptions);
+        paymentOrder.current = payment;
+        setPaymentUrl(payment.paymentUrl);
       } catch (error) {
         console.error('VNPay create URL error:', error);
         setLoadError('Không thể tạo liên kết thanh toán VNPAY. Vui lòng thử lại sau.');
@@ -71,23 +79,24 @@ const VNPayScreen = ({ route, navigation }) => {
     createPaymentUrl();
   }, []);
 
-  const getQueryParam = (url, key) => {
-    const match = url.match(new RegExp(`[?&]${key}=([^&]+)`));
-    return match ? decodeURIComponent(match[1]) : null;
-  };
-
-  const handleNavigationStateChange = (navState) => {
-    const { url } = navState;
-
-    // Khi VNPay redirect về returnUrl từ backend (chứa vnp_ResponseCode)
-    if (!url || !url.includes('vnp_ResponseCode=')) return;
-
-    // Tránh xử lý nhiều lần (WebView gọi onNavigationStateChange 2+ lần)
-    if (hasHandledResult.current) return;
-    hasHandledResult.current = true;
-
-    const responseCode = getQueryParam(url, 'vnp_ResponseCode');
-    if (responseCode === '00') {
+  const verifyPaymentResult = async () => {
+    if (checkingPayment || !paymentOrder.current) return;
+    setCheckingPayment(true);
+    try {
+      const response = await fetch(apiUrl(`/api/orders/${paymentOrder.current.id}`), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Chưa thể xác nhận thanh toán.');
+      if (data.order.paymentStatus === 'pending') {
+        setAwaitingConfirmation(true);
+        return;
+      }
+      if (data.order.paymentStatus !== 'paid') {
+        Alert.alert('Thất bại', 'Thanh toán chưa thành công.');
+        navigation.goBack();
+        return;
+      }
       const reservationData = route.params?.reservationData;
       if (reservationData) {
         Alert.alert('Thành công', 'Đặt cọc bàn thành công!', [
@@ -112,10 +121,19 @@ const VNPayScreen = ({ route, navigation }) => {
           },
         ]);
       }
-    } else {
-      Alert.alert('Thất bại', 'Giao dịch bị huỷ hoặc có lỗi xảy ra.');
-      navigation.goBack();
+    } catch (error) {
+      setAwaitingConfirmation(true);
+      Alert.alert('Chưa thể xác nhận', error.message);
+    } finally {
+      setCheckingPayment(false);
     }
+  };
+
+  const handleNavigationStateChange = ({ url }) => {
+    if (!url || hasHandledResult.current || !paymentOrder.current) return;
+    if (!isPaymentReturn(url, paymentOrder.current)) return;
+    hasHandledResult.current = true;
+    verifyPaymentResult();
   };
 
   const handleWebViewError = () => {
@@ -138,6 +156,20 @@ const VNPayScreen = ({ route, navigation }) => {
     );
   }
 
+  if (awaitingConfirmation) {
+    return (
+      <SafeAreaView style={styles.center}>
+        <Text style={styles.loadingText}>Đang chờ xác nhận thanh toán từ VNPay.</Text>
+        <TouchableOpacity style={styles.homeBtn} disabled={checkingPayment} onPress={verifyPaymentResult}>
+          <Text style={styles.homeBtnText}>{checkingPayment ? 'Đang kiểm tra...' : 'Kiểm tra lại'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.goBack()}>
+          <Text style={styles.homeBtnText}>Quay lại</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   if (typeof paymentUrl !== 'string' || !paymentUrl.trim()) {
     return (
       <SafeAreaView style={styles.center}>
@@ -156,7 +188,16 @@ const VNPayScreen = ({ route, navigation }) => {
     <SafeAreaView style={styles.container}>
       <WebView
         source={{ uri: paymentUrl.trim() }}
+        // The library opens URLs outside this list through Linking before calling our guard.
+        // Route every scheme to the guard so rejected schemes stay blocked.
         originWhitelist={['*']}
+        onShouldStartLoadWithRequest={({ url }) => isPaymentNavigationAllowed(url, paymentOrder.current, transportOptions)}
+        mixedContentMode="never"
+        allowFileAccess={false}
+        allowFileAccessFromFileURLs={false}
+        allowUniversalAccessFromFileURLs={false}
+        javaScriptCanOpenWindowsAutomatically={false}
+        setSupportMultipleWindows={false}
         onNavigationStateChange={handleNavigationStateChange}
         onError={handleWebViewError}
         onHttpError={handleWebViewError}

@@ -19,6 +19,8 @@ function validateChatRequest(body) {
 function createChatController(service = createChatService()) {
   return async (req, res) => {
     try {
+      if (req.body?.aiConsent !== true) throw new ChatError('AI_CONSENT_REQUIRED',
+        'Bạn cần đồng ý gửi nội dung chat tới Google Gemini trước khi sử dụng trợ lý.', 403);
       const input = validateChatRequest(req.body);
       res.json(await service.reply(input));
     } catch (error) {

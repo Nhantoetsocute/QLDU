@@ -22,6 +22,7 @@ import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import MapView, { Marker } from 'react-native-maps';
 import { useAppTheme } from '../theme/ThemeContext';
 import { fetchStores } from '../services/catalog';
+import { subscribePrivacyReset } from '../services/privacyStorage';
 
 const ORANGE_COLOR = '#E57905';
 const DEPOSIT_AMOUNT = 100000;
@@ -48,6 +49,16 @@ const StoreScreen = ({ navigation, route }) => {
   const [stores, setStores] = useState([]);
   const [storesLoading, setStoresLoading] = useState(true);
   const [storesError, setStoresError] = useState('');
+
+  useEffect(() => subscribePrivacyReset(() => {
+    setReservedMap({});
+    setMyReservations([]);
+    setSelectedStore(null);
+    setSelectedTableNo(null);
+    setSelectedTimeSlot(timeSlots[0]);
+    setModalVisible(false);
+    navigation.setParams({ reservationResult: null });
+  }), [navigation]);
 
   const loadStores = async (signal) => {
     setStoresLoading(true);

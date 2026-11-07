@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS Users (
   AvatarUrl     VARCHAR(500)  NULL                 COMMENT 'Đường dẫn tương đối, VD: /avatars/abc.jpg',
   OTPCode       VARCHAR(10)   NULL                 COMMENT 'Mã OTP (quên mật khẩu)',
   OTPExpiry     DATETIME      NULL                 COMMENT 'Thời gian hết hạn OTP',
+  FailedLoginAttempts SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  FirstFailedLoginAt DATETIME NULL,
+  LastFailedLoginAt DATETIME NULL,
+  LockedUntil DATETIME NULL,
+  LoginLockDurationSeconds INT UNSIGNED NOT NULL DEFAULT 0,
   IsActive      TINYINT(1)    NOT NULL DEFAULT 1   COMMENT '1=hoạt động, 0=bị khóa',
   CreatedAt     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UpdatedAt     DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -495,3 +500,12 @@ ON DUPLICATE KEY UPDATE Capacity = VALUES(Capacity);
 -- HOÀN TẤT
 -- =========================================================
 SELECT 'QuanLyBanNuoc database created successfully!' AS Message;
+
+-- Trạng thái thanh toán tách khỏi trạng thái giao hàng (migration bảo mật 07/11/2026).
+CREATE TABLE IF NOT EXISTS PaymentTransactions (
+    OrderId BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    State ENUM('pending','paid','failed') NOT NULL DEFAULT 'pending',
+    TransactionNo VARCHAR(100) NULL,
+    UpdatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT FK_PaymentTransactions_Orders FOREIGN KEY (OrderId) REFERENCES Orders(OrderId) ON DELETE RESTRICT
+) ENGINE=InnoDB;

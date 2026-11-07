@@ -96,6 +96,7 @@ const SignUpScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleRegister = async () => {
@@ -129,6 +130,8 @@ const SignUpScreen = ({ navigation }) => {
         Alert.alert("Thành công!", "Khởi tạo thành viên thành công! Mời bạn đăng nhập.", [
           { text: "Đăng nhập ngay", onPress: () => navigation?.navigate('Login') }
         ]);
+      } else if (data.code === 'WEAK_PASSWORD' || data.error?.startsWith('Mật khẩu')) {
+        setPasswordError(data.error || 'Mật khẩu cần dài ít nhất 12 ký tự và không phổ biến hoặc bị lộ.');
       } else {
         Alert.alert("Đăng ký thất bại", data.error || "Gặp sự cố khi kết nối!");
       }
@@ -221,7 +224,7 @@ const SignUpScreen = ({ navigation }) => {
                   placeholderTextColor="#A9A9A9"
                   secureTextEntry={!showPassword}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(value) => { setPassword(value); setPasswordError(''); }}
                   editable={!isLoading}
                 />
                 <TouchableOpacity onPress={() => setShowPassword(!showPassword)} disabled={isLoading}>
@@ -232,6 +235,8 @@ const SignUpScreen = ({ navigation }) => {
                   />
                 </TouchableOpacity>
               </View>
+              <Text style={styles.passwordHint}>Dùng cụm mật khẩu dài, riêng biệt; tránh thông tin cá nhân và mật khẩu đã dùng ở nơi khác. Không cần ép dùng một loại ký tự cụ thể.</Text>
+              {!!passwordError && <Text accessibilityLiveRegion="polite" style={styles.passwordError}>{passwordError}</Text>}
 
               <TouchableOpacity 
                 style={[styles.submitButton, isLoading && { opacity: 0.7 }]} 
@@ -273,6 +278,8 @@ const styles = StyleSheet.create({
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(0, 0, 0, 0.4)', borderRadius: 12, marginBottom: 18, paddingHorizontal: 15, height: 55, borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.1)' },
   inputIcon: { marginRight: 10 },
   input: { flex: 1, fontSize: 15, color: '#FFF' },
+  passwordHint: { color: '#D5D5D5', fontSize: 12, lineHeight: 18, marginTop: -8, marginBottom: 12 },
+  passwordError: { color: '#FF9A9A', fontSize: 13, lineHeight: 19, marginBottom: 12 },
   submitButton: { backgroundColor: '#D4AF37', borderRadius: 12, height: 55, justifyContent: 'center', alignItems: 'center', marginTop: 15, shadowColor: '#D4AF37', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.5, shadowRadius: 8, elevation: 5 },
   submitButtonText: { color: '#1A1A1A', fontSize: 16, fontWeight: 'bold', letterSpacing: 1.5 },
   loginContainer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40 },

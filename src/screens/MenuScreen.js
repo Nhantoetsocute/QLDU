@@ -1,10 +1,11 @@
+import PrivateAvatar from '../components/PrivateAvatar';
 import React from 'react';
 import {
+  Alert,
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Switch,
   ScrollView,
   StatusBar,
@@ -16,7 +17,7 @@ import { useUserProfile } from '../context/UserProfileContext';
 
 const MenuScreen = ({ navigation }) => {
   const { isDarkMode, colors, toggleTheme } = useAppTheme();
-  const { profile, avatarUri, logoutContext } = useUserProfile();
+  const { profile, avatarUri, logoutContext, token } = useUserProfile();
 
   const theme = {
     background: colors.background,
@@ -69,8 +70,8 @@ const MenuScreen = ({ navigation }) => {
             activeOpacity={0.8}
           >
             {profile?.avatarUri || profile?.avatar ? (
-              <Image 
-                source={{ uri: profile.avatarUri || profile.avatar }}
+              <PrivateAvatar
+                uri={avatarUri || profile.avatar} token={token}
                 style={[styles.avatar, { borderColor: theme.gold }]} 
               />
             ) : (
@@ -140,8 +141,9 @@ const MenuScreen = ({ navigation }) => {
               title="Đăng xuất" 
               isDestructive={true} 
               onPress={async () => {
-                await logoutContext();
-                navigation.replace('Login');
+                try { await logoutContext(); }
+                catch { Alert.alert('Đăng xuất', 'Phiên trong app đã đóng. Chưa xóa hết dữ liệu trên thiết bị, hãy thử đăng xuất lại.'); }
+                // AppNavigator removes authenticated screens when the session closes.
               }}
             />
           </View>

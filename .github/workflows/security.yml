@@ -1,0 +1,33 @@
+name: Security
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: '0 2 * * 1'
+permissions:
+  contents: read
+jobs:
+  dependencies:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        directory: ['.', backend]
+    defaults:
+      run:
+        working-directory: ${{ matrix.directory }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - if: matrix.directory == '.'
+        run: node scripts/check-secrets.js
+      - run: npm ci --ignore-scripts
+      - run: npm audit --audit-level=high
+      - run: npm audit signatures
+      - if: matrix.directory == '.'
+        run: npm test
+      - if: matrix.directory == 'backend'
+        run: npm test
+        env:
+          JWT_SECRET: ci-only-random-test-secret-32-characters-long

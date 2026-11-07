@@ -314,18 +314,19 @@ test('request validation rejects role spoofing, malformed history, oversized pay
 async function startServer(t, options = {}) {
   const app = express();
   app.use(express.json({ limit: '32kb' }));
-  app.use('/api/chat', createChatRouter(options));
+  app.use('/api/chat', createChatRouter({ authenticate: require('../src/middleware/authMiddleware').createAuthMiddleware({ getUser: async (userId) => ({UserId:userId,IsActive:1,PasswordHash:'test-hash'}) }), ...options }));
   const server = http.createServer(app);
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
   t.after(async () => { server.closeAllConnections(); await new Promise((resolve) => server.close(resolve)); });
   return async (body, token) => {
     const response = await fetch(`http://127.0.0.1:${server.address().port}/api/chat`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(body),
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify({ aiConsent: true, ...body }),
     });
     return { response, body: await response.json() };
   };
 }
-const tokenFor = (userId) => jwt.sign({ userId }, process.env.JWT_SECRET || 'secret', { expiresIn: '2m' });
+process.env.JWT_SECRET = 'chat-tests-only-secret-at-least-32-bytes';
+const tokenFor = (userId) => require('../src/config/auth').signToken({ userId }, 'test-hash');
 
 test('HTTP route requires JWT, validates request, and responds with canonical envelope', async (t) => {
   const calls = [];
@@ -380,4 +381,16 @@ test('HTTP quota response has Retry-After and unexpected exceptions reveal no pr
   assert.equal(safe.body.code, 'CHAT_UNAVAILABLE');
   assert.ok(!JSON.stringify(safe.body).includes('secret-api-key'));
   assert.ok(!JSON.stringify(safe.body).includes('database-password'));
+});
+
+
+test('HTTP AI consent is required before any chat or provider processing', async (t) => {
+  let calls = 0;
+  const post = await startServer(t, { service: { reply: async () => { calls++; return {success:true,reply:'OK',products:[]}; } } });
+  for (const aiConsent of [false, null, 'true', undefined]) {
+    const result = await post({ message:'Có món gì?', aiConsent }, tokenFor(1));
+    assert.equal(result.response.status,403);
+    assert.equal(result.body.code,'AI_CONSENT_REQUIRED');
+  }
+  assert.equal(calls,0);
 });

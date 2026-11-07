@@ -72,8 +72,9 @@ Scan QR code bằng app **Expo Go** trên điện thoại (cùng mạng WiFi v�
 
 Dự án dùng Expo SDK 58. Dùng Expo Go hỗ trợ SDK 58 trên điện thoại.
 Chạy `npm start` để hiện QR cho Expo Go qua mạng LAN và xóa cache cũ.
-Lệnh tự ưu tiên Node 24 đã cài tại `/private/tmp/qldu-node24/node_modules/.bin`
-trên máy này; trên máy khác, cần cài Node 24 và thêm vào PATH.
+Dự án yêu cầu Node 24.3 trở lên. Lệnh khởi chạy tự chọn Node 24 từ `.nvmrc`,
+các đường dẫn cài phổ biến hoặc `QLDU_NODE_BIN`; nếu chưa có runtime phù hợp,
+cài Node 24 rồi chạy lại. Có thể kiểm tra bằng `node --version`.
 
 ---
 
@@ -155,4 +156,3 @@ npm run setup    # reset-db + seed (chạy 1 lần khi mới clone)
 ```
 
 ---
-

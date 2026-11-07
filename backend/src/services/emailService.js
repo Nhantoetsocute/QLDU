@@ -5,7 +5,10 @@ const transporter = nodemailer.createTransport({
   service: 'gmail',
   host: 'smtp.gmail.com',
   port: 587,
-  secure: false, // true cho port 465, false cho port 587
+  secure: false,
+  requireTLS: true,
+  disableFileAccess: true,
+  disableUrlAccess: true,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
@@ -48,11 +51,10 @@ exports.sendOTP = async (toEmail, otpCode) => {
       `,
     };
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent: %s', info.messageId);
+    await transporter.sendMail(mailOptions);
     return true;
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Không thể gửi email OTP.');
     return false;
   }
 };

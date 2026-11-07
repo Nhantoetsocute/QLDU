@@ -8,7 +8,7 @@ exports.getCategories = async (req, res) => {
         );
         res.json(rows);
     } catch (error) {
-        console.error('GetCategories error:', error.message);
+        console.error('GetCategories error:', error.code || 'REQUEST_FAILED');
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };
@@ -20,9 +20,9 @@ exports.getFoods = async (req, res) => {
         const offset = (Math.max(1, parseInt(page)) - 1) * parseInt(limit);
 
         let sql = `
-            SELECT f.FoodId, f.FoodName, f.BasePrice, f.DiscountPercent, f.Stock, 
-                   f.ImageUrl, f.Description, c.CategoryName 
-            FROM Food f 
+            SELECT f.FoodId, f.FoodName, f.BasePrice, f.DiscountPercent, f.Stock,
+                   f.ImageUrl, f.Description, c.CategoryName
+            FROM Food f
             LEFT JOIN Category c ON f.CategoryId = c.CategoryId
             WHERE f.IsActive = 1
         `;
@@ -46,7 +46,7 @@ exports.getFoods = async (req, res) => {
         const [rows] = await pool.query(sql, params);
         res.json(rows);
     } catch (error) {
-        console.error('GetFoods error:', error.message);
+        console.error('GetFoods error:', error.code || 'REQUEST_FAILED');
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };
@@ -55,16 +55,16 @@ exports.getFoods = async (req, res) => {
 exports.getFoodById = async (req, res) => {
     try {
         const [rows] = await pool.execute(`
-            SELECT f.*, c.CategoryName 
-            FROM Food f 
-            LEFT JOIN Category c ON f.CategoryId = c.CategoryId 
+            SELECT f.FoodId, f.FoodName, f.CategoryId, f.BasePrice, f.DiscountPercent, f.Stock, f.ImageUrl, f.Description, c.CategoryName
+            FROM Food f
+            LEFT JOIN Category c ON f.CategoryId = c.CategoryId
             WHERE f.FoodId = ? AND f.IsActive = 1
         `, [req.params.id]);
 
         if (rows.length === 0) return res.status(404).json({ error: "Không tìm thấy món" });
         res.json(rows[0]);
     } catch (error) {
-        console.error('GetFoodById error:', error.message);
+        console.error('GetFoodById error:', error.code || 'REQUEST_FAILED');
         res.status(500).json({ error: "Lỗi máy chủ" });
     }
 };

@@ -1,3 +1,4 @@
+import PrivateAvatar from '../components/PrivateAvatar';
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -8,7 +9,6 @@ import {
   TouchableOpacity,
   TouchableWithoutFeedback,
   Keyboard,
-  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -24,7 +24,7 @@ import { apiUrl } from '../config/api';
 const ORANGE_COLOR = '#E57905';
 
 const ProfileScreen = ({ navigation }) => {
-  const { profile, avatarUri, updateProfile, updateAvatar, token } = useUserProfile();
+  const { profile, avatarUri, updateProfile, updateAvatar, token, logoutContext } = useUserProfile();
   const { isDarkMode, colors } = useAppTheme();
 
   const ui = {
@@ -45,6 +45,12 @@ const ProfileScreen = ({ navigation }) => {
   const [email, setEmail] = useState(profile?.email || '');
   const [phone, setPhone] = useState(profile?.phone || '');
   const [address, setAddress] = useState(profile?.address || '');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [passwordWorking, setPasswordWorking] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
     if (profile) {
@@ -82,7 +88,7 @@ const ProfileScreen = ({ navigation }) => {
         const pickedUri = result.assets[0].uri;
 
         // Hiển thị ảnh ngay lập tức (optimistic update)
-        updateAvatar(pickedUri);
+        // Local files are uploaded first; the confirmed private URL becomes the avatar.
 
         // Upload lên server
         const formData = new FormData();
@@ -144,6 +150,40 @@ const ProfileScreen = ({ navigation }) => {
     Alert.alert('Thành công', 'Thông tin tài khoản đã được cập nhật.');
   };
 
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      setPasswordError('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Mật khẩu xác nhận không trùng khớp.');
+      return;
+    }
+    setPasswordWorking(true);
+    setPasswordError('');
+    try {
+      const response = await fetch(apiUrl('/api/auth/change-password'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        if (data.code === 'WEAK_PASSWORD' || data.error?.startsWith('Mật khẩu')) {
+          setPasswordError(data.error || 'Mật khẩu cần dài ít nhất 12 ký tự và không phổ biến hoặc bị lộ.');
+          return;
+        }
+        throw new Error(data.error || 'Không thể đổi mật khẩu.');
+      }
+      await logoutContext();
+      Alert.alert('Đổi mật khẩu thành công', 'Vui lòng đăng nhập lại bằng mật khẩu mới.');
+    } catch (error) {
+      setPasswordError(error.message || 'Không thể đổi mật khẩu. Vui lòng thử lại.');
+    } finally {
+      setPasswordWorking(false);
+    }
+  };
+
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
       <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}> 
@@ -168,8 +208,8 @@ const ProfileScreen = ({ navigation }) => {
           <View style={styles.avatarContainer}>
             <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.85}>
               {typeof avatarUri === 'string' && avatarUri.trim() ? (
-                <Image
-                  source={{ uri: avatarUri }}
+                <PrivateAvatar
+                  uri={avatarUri} token={token}
                   style={[styles.avatar, { borderColor: ui.accent }]}
                 />
               ) : (
@@ -237,6 +277,46 @@ const ProfileScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
 
+          <View style={[styles.passwordSection, { backgroundColor: ui.inputBg, borderColor: ui.border }]}>
+            <Text style={[styles.passwordTitle, { color: ui.text }]}>Đổi mật khẩu</Text>
+            <Text style={[styles.passwordHint, { color: ui.subText }]}>Dùng cụm mật khẩu dài, riêng biệt; backend sẽ kiểm tra mật khẩu phổ biến hoặc đã bị lộ.</Text>
+            {[
+              ['Mật khẩu hiện tại', currentPassword, setCurrentPassword],
+              ['Mật khẩu mới', newPassword, setNewPassword],
+              ['Xác nhận mật khẩu mới', confirmPassword, setConfirmPassword],
+            ].map(([label, value, setter]) => (
+              <View key={label}>
+                <Text style={[styles.label, { color: ui.text }]}>{label}</Text>
+                <View style={[styles.passwordInputRow, { backgroundColor: ui.bg, borderColor: ui.border }]}>
+                  <TextInput
+                    style={[styles.passwordInput, { color: ui.text }]}
+                    placeholder={label}
+                    placeholderTextColor={ui.subText}
+                    secureTextEntry={!showChangePassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    value={value}
+                    onChangeText={(next) => { setter(next); setPasswordError(''); }}
+                    editable={!passwordWorking}
+                  />
+                  <TouchableOpacity onPress={() => setShowChangePassword(!showChangePassword)} disabled={passwordWorking}>
+                    <Ionicons name={showChangePassword ? 'eye-outline' : 'eye-off-outline'} size={20} color={ui.accent} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+            {!!passwordError && <Text accessibilityLiveRegion="polite" style={styles.passwordError}>{passwordError}</Text>}
+            <TouchableOpacity
+              style={[styles.updateButton, { backgroundColor: ui.accent, marginTop: 4, opacity: passwordWorking ? 0.6 : 1 }]}
+              onPress={handleChangePassword}
+              disabled={passwordWorking}
+            >
+              <Text style={[styles.updateButtonText, { color: isDarkMode ? '#1A1A1A' : '#FFF' }]}>
+                {passwordWorking ? 'ĐANG XỬ LÝ...' : 'Đổi mật khẩu'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -298,6 +378,12 @@ const styles = StyleSheet.create({
   formContainer: {
     marginBottom: 40,
   },
+  passwordSection: { borderWidth: 1, borderRadius: 12, padding: 16, marginTop: 24 },
+  passwordTitle: { fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  passwordHint: { fontSize: 13, lineHeight: 19, marginBottom: 16 },
+  passwordInputRow: { minHeight: 50, borderRadius: 10, borderWidth: 1, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  passwordInput: { flex: 1, minHeight: 48, fontSize: 15 },
+  passwordError: { color: '#C62828', fontSize: 13, lineHeight: 19, marginBottom: 12 },
   label: {
     fontSize: 15,
     fontWeight: '600',

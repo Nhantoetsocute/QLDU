@@ -17,7 +17,7 @@ npm start
 
 Điện thoại và máy tính cần cùng Wi-Fi. Quét QR bằng Expo Go. Backend phải tiếp tục chạy để app tải sản phẩm và gửi câu hỏi. Nếu cổng 3000 đang được dùng bởi backend đã chạy thì không cần mở thêm phiên backend.
 
-SDK Google hiện yêu cầu Node >=22; khuyến nghị Node 24 LTS. Các lệnh của dự án ưu tiên bản Node 24 đã cài riêng trên máy này tại `/private/tmp/qldu-node24/node_modules/.bin`, rồi mới dùng Node trong PATH. Nếu thư mục tạm đã bị hệ thống xóa, cài Node 24 vào PATH trước khi chạy/cài thư viện.
+SDK Google hiện yêu cầu Node >=22; dự án ghim Node 24 trong `.nvmrc`. Các lệnh Node của dự án tự chọn Node 24 đã cài qua nvm, Volta, mise, Homebrew hoặc `QLDU_NODE_BIN`. Nếu chưa cài runtime tương thích, cài Node 24 trước khi chạy.
 
 ## Cấu hình Gemini
 
