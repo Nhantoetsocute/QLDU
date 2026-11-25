@@ -5,6 +5,7 @@ import { useUserProfile } from '../context/UserProfileContext';
 import { useCart } from '../context/CartContext';
 import { apiUrl, BASE_URL } from '../config/api';
 import { paymentDetails, isPaymentNavigationAllowed, isPaymentReturn } from '../config/paymentTransport';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 const transportOptions = { apiBase: BASE_URL, development: typeof __DEV__ !== 'undefined' && __DEV__ };
 
@@ -148,20 +149,23 @@ const VNPayScreen = ({ route, navigation }) => {
   };
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#D4AF37" />
-        <Text style={styles.loadingText}>Đang tạo liên kết thanh toán...</Text>
-      </View>
-    );
+    return <LoadingIndicator fullScreen label="Đang tạo liên kết thanh toán..." />;
   }
 
   if (awaitingConfirmation) {
     return (
       <SafeAreaView style={styles.center}>
         <Text style={styles.loadingText}>Đang chờ xác nhận thanh toán từ VNPay.</Text>
-        <TouchableOpacity style={styles.homeBtn} disabled={checkingPayment} onPress={verifyPaymentResult}>
-          <Text style={styles.homeBtnText}>{checkingPayment ? 'Đang kiểm tra...' : 'Kiểm tra lại'}</Text>
+        <TouchableOpacity
+          style={styles.homeBtn}
+          disabled={checkingPayment}
+          onPress={verifyPaymentResult}
+          accessibilityLabel="Kiểm tra lại thanh toán"
+          accessibilityState={{ busy: checkingPayment, disabled: checkingPayment }}
+        >
+          {checkingPayment ? (
+            <ActivityIndicator color={styles.homeBtnText.color} accessibilityLabel="Đang xác nhận thanh toán" />
+          ) : <Text style={styles.homeBtnText}>Kiểm tra lại</Text>}
         </TouchableOpacity>
         <TouchableOpacity style={styles.homeBtn} onPress={() => navigation.goBack()}>
           <Text style={styles.homeBtnText}>Quay lại</Text>
@@ -206,6 +210,13 @@ const VNPayScreen = ({ route, navigation }) => {
           <ActivityIndicator style={styles.webviewLoader} size="large" color="#D4AF37" />
         )}
       />
+      {checkingPayment && (
+        <LoadingIndicator
+          fullScreen
+          label="Đang xác nhận thanh toán..."
+          style={[StyleSheet.absoluteFillObject, { zIndex: 10 }]}
+        />
+      )}
     </SafeAreaView>
   );
 };

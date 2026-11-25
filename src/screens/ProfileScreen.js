@@ -1,6 +1,7 @@
 import PrivateAvatar from '../components/PrivateAvatar';
 import React, { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -50,6 +51,7 @@ const ProfileScreen = ({ navigation }) => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showChangePassword, setShowChangePassword] = useState(false);
   const [passwordWorking, setPasswordWorking] = useState(false);
+  const [avatarWorking, setAvatarWorking] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
   useEffect(() => {
@@ -70,6 +72,8 @@ const ProfileScreen = ({ navigation }) => {
     address.trim() !== (originalProfile.address || '');
 
   const handlePickAvatar = async () => {
+    if (avatarWorking || passwordWorking) return;
+    setAvatarWorking(true);
     try {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (!permission.granted) {
@@ -122,6 +126,8 @@ const ProfileScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Avatar upload error:', error);
       Alert.alert('Lỗi', 'Không thể chọn hoặc upload ảnh. Vui lòng thử lại.');
+    } finally {
+      setAvatarWorking(false);
     }
   };
 
@@ -151,6 +157,7 @@ const ProfileScreen = ({ navigation }) => {
   };
 
   const handleChangePassword = async () => {
+    if (passwordWorking || avatarWorking) return;
     if (!currentPassword || !newPassword || !confirmPassword) {
       setPasswordError('Vui lòng nhập đầy đủ mật khẩu hiện tại và mật khẩu mới.');
       return;
@@ -206,7 +213,7 @@ const ProfileScreen = ({ navigation }) => {
           
           {/* KHU VỰC AVATAR */}
           <View style={styles.avatarContainer}>
-            <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.85}>
+            <TouchableOpacity onPress={handlePickAvatar} activeOpacity={0.85} disabled={avatarWorking || passwordWorking}>
               {typeof avatarUri === 'string' && avatarUri.trim() ? (
                 <PrivateAvatar
                   uri={avatarUri} token={token}
@@ -218,8 +225,17 @@ const ProfileScreen = ({ navigation }) => {
                 </View>
               )}
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.cameraButton, { backgroundColor: ui.accent }]} activeOpacity={0.8} onPress={handlePickAvatar}>
-              <Ionicons name="camera" size={18} color={isDarkMode ? '#1A1A1A' : '#FFF'} />
+            <TouchableOpacity
+              style={[styles.cameraButton, { backgroundColor: ui.accent }]}
+              activeOpacity={0.8}
+              onPress={handlePickAvatar}
+              disabled={avatarWorking || passwordWorking}
+              accessibilityLabel="Đổi ảnh đại diện"
+              accessibilityState={{ busy: avatarWorking, disabled: avatarWorking || passwordWorking }}
+            >
+              {avatarWorking ? (
+                <ActivityIndicator size="small" color={isDarkMode ? '#1A1A1A' : '#FFF'} accessibilityLabel="Đang tải ảnh đại diện lên" />
+              ) : <Ionicons name="camera" size={18} color={isDarkMode ? '#1A1A1A' : '#FFF'} />}
             </TouchableOpacity>
           </View>
 
@@ -309,11 +325,13 @@ const ProfileScreen = ({ navigation }) => {
             <TouchableOpacity
               style={[styles.updateButton, { backgroundColor: ui.accent, marginTop: 4, opacity: passwordWorking ? 0.6 : 1 }]}
               onPress={handleChangePassword}
-              disabled={passwordWorking}
+              disabled={passwordWorking || avatarWorking}
+              accessibilityLabel="Đổi mật khẩu"
+              accessibilityState={{ busy: passwordWorking, disabled: passwordWorking || avatarWorking }}
             >
-              <Text style={[styles.updateButtonText, { color: isDarkMode ? '#1A1A1A' : '#FFF' }]}>
-                {passwordWorking ? 'ĐANG XỬ LÝ...' : 'Đổi mật khẩu'}
-              </Text>
+              {passwordWorking ? (
+                <ActivityIndicator color={isDarkMode ? '#1A1A1A' : '#FFF'} accessibilityLabel="Đang đổi mật khẩu" />
+              ) : <Text style={[styles.updateButtonText, { color: isDarkMode ? '#1A1A1A' : '#FFF' }]}>Đổi mật khẩu</Text>}
             </TouchableOpacity>
           </View>
 

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -12,6 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '../theme/ThemeContext';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 const STORAGE_KEY = '@selected_language';
 
@@ -27,6 +30,8 @@ const languages = [
 const LanguageScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const [selected, setSelected] = useState('vi');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
 
   const ui = {
@@ -54,12 +59,25 @@ const LanguageScreen = ({ navigation }) => {
       const stored = await AsyncStorage.getItem(STORAGE_KEY);
       if (stored) setSelected(stored);
     } catch (e) { }
+    finally { setIsLoading(false); }
   };
 
   const selectLanguage = async (id) => {
+    if (isLoading || isSaving || id === selected) return;
+    const previous = selected;
+    setIsSaving(true);
     setSelected(id);
-    await AsyncStorage.setItem(STORAGE_KEY, id);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, id);
+    } catch {
+      setSelected(previous);
+      Alert.alert('Chưa lưu được ngôn ngữ', 'Vui lòng thử lại.');
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) return <LoadingIndicator fullScreen label="Đang tải ngôn ngữ..." />;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
@@ -97,6 +115,8 @@ const LanguageScreen = ({ navigation }) => {
                   style={styles.langRow}
                   onPress={() => selectLanguage(lang.id)}
                   activeOpacity={0.7}
+                  disabled={isSaving}
+                  accessibilityState={{ selected: isSelected, busy: isSaving && isSelected, disabled: isSaving }}
                 >
                   <Text style={styles.flag}>{lang.flag}</Text>
                   <View style={styles.langTextContainer}>
@@ -107,9 +127,11 @@ const LanguageScreen = ({ navigation }) => {
                   </View>
 
                   {/* Radio Button */}
-                  <View style={[styles.radioOuter, { borderColor: isSelected ? ui.accent : ui.radioOuter }]}>
+                  {isSaving && isSelected ? (
+                    <ActivityIndicator color={ui.accent} accessibilityLabel="Đang lưu ngôn ngữ" />
+                  ) : <View style={[styles.radioOuter, { borderColor: isSelected ? ui.accent : ui.radioOuter }]}>
                     {isSelected && <View style={[styles.radioInner, { backgroundColor: ui.accent }]} />}
-                  </View>
+                  </View>}
                 </TouchableOpacity>
                 {index < languages.length - 1 && (
                   <View style={[styles.divider, { backgroundColor: ui.divider }]} />

@@ -210,7 +210,7 @@ const PrivacyScreen = ({ navigation }) => {
             <Text style={{color:'#c94e4e',fontWeight:'700'}}>Đóng tài khoản và ẩn danh dữ liệu</Text>
           </TouchableOpacity>
           {!token && <Text style={{color:ui.subText}}>Đăng nhập để xuất dữ liệu hoặc đóng tài khoản.</Text>}
-          {working && <ActivityIndicator color={ui.accent} />}
+          {working && !deleteVisible && <ActivityIndicator color={ui.accent} accessibilityLabel="Đang xuất dữ liệu" />}
         </View>
 
         <Text style={[styles.footerText, { color: ui.subText }]}>
@@ -224,7 +224,9 @@ const PrivacyScreen = ({ navigation }) => {
             <Text style={[styles.sectionText,{color:ui.subText,marginVertical:12}]}>Thao tác này không thể khôi phục. Thông tin cá nhân sẽ được ẩn danh; số tiền, mã giao dịch và dữ liệu kế toán vẫn được giữ để đối soát. Cần xử lý xong các đơn và thanh toán đang chờ trước khi đóng.</Text>
             <TextInput accessibilityLabel="Mật khẩu hiện tại" placeholder="Mật khẩu hiện tại" placeholderTextColor={ui.subText} secureTextEntry autoCapitalize="none" autoCorrect={false} maxLength={256} value={password} onChangeText={setPassword} editable={!working} style={{color:ui.text,borderColor:ui.cardBorder,borderWidth:1,borderRadius:10,padding:14}} />
             <TouchableOpacity disabled={!password || working} onPress={closeAccount} style={{paddingVertical:16,opacity:password && !working ? 1 : 0.5}}>
-              <Text style={{color:'#c94e4e',fontWeight:'700'}}>Xác nhận đóng tài khoản</Text>
+              {working ? (
+                <ActivityIndicator color="#c94e4e" accessibilityLabel="Đang đóng tài khoản" />
+              ) : <Text style={{color:'#c94e4e',fontWeight:'700'}}>Xác nhận đóng tài khoản</Text>}
             </TouchableOpacity>
             <TouchableOpacity disabled={working} onPress={() => {setDeleteVisible(false);setPassword('');}} style={{paddingVertical:12}}>
               <Text style={{color:ui.accent}}>Hủy</Text>

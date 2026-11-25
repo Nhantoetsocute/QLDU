@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   View,
   Text,
   StyleSheet,
@@ -13,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAppTheme } from '../theme/ThemeContext';
+import LoadingIndicator from '../components/LoadingIndicator';
 
 const STORAGE_KEY = '@notification_settings';
 
@@ -65,6 +68,8 @@ const notificationItems = [
 const NotificationsScreen = ({ navigation }) => {
   const { isDarkMode, colors } = useAppTheme();
   const [settings, setSettings] = useState(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [fadeAnim] = useState(new Animated.Value(0));
 
   const ui = {
@@ -92,26 +97,38 @@ const NotificationsScreen = ({ navigation }) => {
       if (stored) setSettings(JSON.parse(stored));
     } catch (e) {
       console.error(e);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const toggleSetting = useCallback(async (key) => {
-    setSettings(prev => {
-      const updated = { ...prev, [key]: !prev[key] };
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
-  }, []);
+  const saveSettings = async (updated) => {
+    if (isLoading || isSaving) return;
+    const previous = settings;
+    setIsSaving(true);
+    setSettings(updated);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    } catch {
+      setSettings(previous);
+      Alert.alert('Chưa lưu được cài đặt thông báo', 'Vui lòng thử lại.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const toggleSetting = (key) => saveSettings({ ...settings, [key]: !settings[key] });
 
   const allEnabled = Object.values(settings).every(v => v);
 
-  const toggleAll = useCallback(async () => {
+  const toggleAll = () => {
     const newVal = !allEnabled;
     const updated = {};
     Object.keys(settings).forEach(k => { updated[k] = newVal; });
-    setSettings(updated);
-    await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  }, [allEnabled, settings]);
+    return saveSettings(updated);
+  };
+
+  if (isLoading) return <LoadingIndicator fullScreen label="Đang tải cài đặt thông báo..." />;
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: ui.bg }]}>
@@ -123,7 +140,7 @@ const NotificationsScreen = ({ navigation }) => {
           <Ionicons name="chevron-back" size={28} color={ui.accent} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: ui.text }]}>Thông báo</Text>
-        <View style={{ width: 28 }} />
+        {isSaving ? <ActivityIndicator style={{ width: 28 }} color={ui.accent} accessibilityLabel="Đang lưu cài đặt thông báo" /> : <View style={{ width: 28 }} />}
       </View>
 
       <Animated.ScrollView
@@ -150,6 +167,7 @@ const NotificationsScreen = ({ navigation }) => {
             ios_backgroundColor="#555"
             value={allEnabled}
             onValueChange={toggleAll}
+            disabled={isSaving}
           />
         </View>
 
@@ -178,6 +196,7 @@ const NotificationsScreen = ({ navigation }) => {
                   ios_backgroundColor="#555"
                   value={settings[item.key]}
                   onValueChange={() => toggleSetting(item.key)}
+                  disabled={isSaving}
                 />
               </View>
               {index < notificationItems.length - 1 && (

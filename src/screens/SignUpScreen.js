@@ -1,6 +1,7 @@
 import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   TextInput,
@@ -244,7 +245,7 @@ const SignUpScreen = ({ navigation }) => {
                 disabled={isLoading}
               >
                 {isLoading ? (
-                  <Text style={styles.submitButtonText}>ĐANG XỬ LÝ...</Text>
+                  <ActivityIndicator color={styles.submitButtonText.color} accessibilityLabel="Đang xử lý" />
                 ) : (
                   <Text style={styles.submitButtonText}>MỞ KHÓA ĐẶC QUYỀN</Text>
                 )}
