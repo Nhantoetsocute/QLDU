@@ -1,6 +1,7 @@
 import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   TextInput,
@@ -102,6 +103,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -118,10 +120,12 @@ const ForgotPasswordScreen = ({ navigation }) => {
   };
 
   const handleRequestOTP = async () => {
+    if (isLoading) return;
     if (!email) {
       Alert.alert('Lỗi', 'Vui lòng nhập email');
       return;
     }
+    setIsLoading(true);
     try {
       const res = await fetch(apiUrl('/api/auth/forgot-password'), {
         method: 'POST',
@@ -134,14 +138,18 @@ const ForgotPasswordScreen = ({ navigation }) => {
       animateStepChange(2);
     } catch (error) {
       Alert.alert('Lỗi', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleVerifyOTP = async () => {
+    if (isLoading) return;
     if (!otp || otp.length !== 6) {
       Alert.alert('Lỗi', 'Vui lòng nhập đủ 6 số OTP');
       return;
     }
+    setIsLoading(true);
     try {
       const res = await fetch(apiUrl('/api/auth/verify-otp'), {
         method: 'POST',
@@ -153,10 +161,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
       animateStepChange(3);
     } catch (error) {
       Alert.alert('Lỗi', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleResetPassword = async () => {
+    if (isLoading) return;
     if (!newPassword || !confirmPassword) {
       Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ thông tin');
       return;
@@ -165,6 +176,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
       Alert.alert('Lỗi', 'Mật khẩu xác nhận không trùng khớp');
       return;
     }
+    setIsLoading(true);
     try {
       const res = await fetch(apiUrl('/api/auth/reset-password'), {
         method: 'POST',
@@ -184,10 +196,13 @@ const ForgotPasswordScreen = ({ navigation }) => {
       ]);
     } catch (error) {
       Alert.alert('Lỗi', error.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleBack = () => {
+    if (isLoading) return;
     if (step > 1) {
       animateStepChange(step - 1);
     } else {
@@ -215,7 +230,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
             >
               {/* Header Nút Back */}
               <View style={styles.header}>
-                <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+                <TouchableOpacity style={styles.backButton} onPress={handleBack} disabled={isLoading}>
                   <Ionicons name="chevron-back" size={32} color="#D4AF37" />
                 </TouchableOpacity>
               </View>
@@ -240,11 +255,20 @@ const ForgotPasswordScreen = ({ navigation }) => {
                       autoCapitalize="none"
                       value={email}
                       onChangeText={setEmail}
+                      editable={!isLoading}
                     />
                   </View>
 
-                  <TouchableOpacity style={styles.mainButton} onPress={handleRequestOTP}>
-                    <Text style={styles.mainButtonText}>GỬI MÃ XÁC THỰC</Text>
+                  <TouchableOpacity
+                    style={[styles.mainButton, isLoading && styles.buttonDisabled]}
+                    onPress={handleRequestOTP}
+                    disabled={isLoading}
+                    accessibilityLabel="Gửi mã xác thực"
+                    accessibilityState={{ busy: isLoading, disabled: isLoading }}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={styles.mainButtonText.color} accessibilityLabel="Đang gửi mã xác thực" />
+                    ) : <Text style={styles.mainButtonText}>GỬI MÃ XÁC THỰC</Text>}
                   </TouchableOpacity>
                 </View>
               )}
@@ -268,11 +292,20 @@ const ForgotPasswordScreen = ({ navigation }) => {
                       maxLength={6}
                       value={otp}
                       onChangeText={setOtp}
+                      editable={!isLoading}
                     />
                   </View>
 
-                  <TouchableOpacity style={styles.mainButton} onPress={handleVerifyOTP}>
-                    <Text style={styles.mainButtonText}>TIẾP TỤC</Text>
+                  <TouchableOpacity
+                    style={[styles.mainButton, isLoading && styles.buttonDisabled]}
+                    onPress={handleVerifyOTP}
+                    disabled={isLoading}
+                    accessibilityLabel="Xác thực mã OTP"
+                    accessibilityState={{ busy: isLoading, disabled: isLoading }}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={styles.mainButtonText.color} accessibilityLabel="Đang xác thực mã OTP" />
+                    ) : <Text style={styles.mainButtonText}>TIẾP TỤC</Text>}
                   </TouchableOpacity>
                 </View>
               )}
@@ -294,8 +327,9 @@ const ForgotPasswordScreen = ({ navigation }) => {
                       secureTextEntry={!showNewPassword}
                       value={newPassword}
                       onChangeText={(value) => { setNewPassword(value); setPasswordError(''); }}
+                      editable={!isLoading}
                     />
-                    <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)}>
+                    <TouchableOpacity onPress={() => setShowNewPassword(!showNewPassword)} disabled={isLoading}>
                       <Ionicons name={showNewPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#D4AF37" />
                     </TouchableOpacity>
                   </View>
@@ -311,14 +345,23 @@ const ForgotPasswordScreen = ({ navigation }) => {
                       secureTextEntry={!showConfirmPassword}
                       value={confirmPassword}
                       onChangeText={setConfirmPassword}
+                      editable={!isLoading}
                     />
-                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+                    <TouchableOpacity onPress={() => setShowConfirmPassword(!showConfirmPassword)} disabled={isLoading}>
                       <Ionicons name={showConfirmPassword ? 'eye-outline' : 'eye-off-outline'} size={20} color="#D4AF37" />
                     </TouchableOpacity>
                   </View>
 
-                  <TouchableOpacity style={styles.mainButton} onPress={handleResetPassword}>
-                    <Text style={styles.mainButtonText}>HOÀN TẤT ĐỔI MẬT KHẨU</Text>
+                  <TouchableOpacity
+                    style={[styles.mainButton, isLoading && styles.buttonDisabled]}
+                    onPress={handleResetPassword}
+                    disabled={isLoading}
+                    accessibilityLabel="Hoàn tất đổi mật khẩu"
+                    accessibilityState={{ busy: isLoading, disabled: isLoading }}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator color={styles.mainButtonText.color} accessibilityLabel="Đang đổi mật khẩu" />
+                    ) : <Text style={styles.mainButtonText}>HOÀN TẤT ĐỔI MẬT KHẨU</Text>}
                   </TouchableOpacity>
                 </View>
               )}
@@ -433,6 +476,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 1.2,
   },
+  buttonDisabled: { opacity: 0.7 },
 });
 
 export default ForgotPasswordScreen;

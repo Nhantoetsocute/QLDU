@@ -1,6 +1,7 @@
 import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useEffect, useRef } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   TextInput,
@@ -236,7 +237,7 @@ const LoginScreen = ({ navigation }) => {
                 {remainingSeconds > 0 ? (
                   <Text style={styles.loginButtonText}>THỬ LẠI SAU {remainingSeconds}s</Text>
                 ) : isLoading ? (
-                  <Text style={styles.loginButtonText}>ĐANG XỬ LÝ...</Text>
+                  <ActivityIndicator color={styles.loginButtonText.color} accessibilityLabel="Đang xử lý" />
                 ) : (
                   <Text style={styles.loginButtonText}>BẮT ĐẦU HÀNH TRÌNH</Text>
                 )}

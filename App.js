@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import LoadingIndicator from './src/components/LoadingIndicator';
+import { renderScreenLoadingLayout } from './src/components/ScreenLoadingLayout';
 import { NavigationContainer, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
@@ -39,12 +41,12 @@ const AppNavigator = () => {
   const [currentRoute, setCurrentRoute] = useState('Login');
   const updateCurrentRoute = () => setCurrentRoute(navigationRef.getCurrentRoute()?.name || 'Login');
 
-  if (isLoading) return <View style={{flex:1,justifyContent:'center',alignItems:'center'}}><ActivityIndicator accessibilityLabel="Đang xác thực phiên" /></View>;
+  if (isLoading) return <LoadingIndicator fullScreen label="Đang xác thực phiên..." />;
 
   return (
     <NavigationContainer ref={navigationRef} theme={navigationTheme} onReady={updateCurrentRoute} onStateChange={updateCurrentRoute}>
       <View style={styles.navigationRoot}>
-      <Stack.Navigator key={token ? 'signed-in' : 'signed-out'} initialRouteName={token ? 'MainTabs' : 'Login'} screenOptions={{ headerShown: false }}>
+      <Stack.Navigator screenLayout={renderScreenLoadingLayout} key={token ? 'signed-in' : 'signed-out'} initialRouteName={token ? 'MainTabs' : 'Login'} screenOptions={{ headerShown: false }}>
         {token ? (<>
         <Stack.Screen name="AllProducts" component={AllProductsScreen} />
         <Stack.Screen name="ProductDetail" component={ProductDetailScreen} />

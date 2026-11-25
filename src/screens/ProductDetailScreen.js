@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -65,6 +66,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
   const [quantity, setQuantity] = useState(1);
   const [checkoutMode, setCheckoutMode] = useState(null);
+  const [isOrdering, setIsOrdering] = useState(false);
+  const orderingRef = useRef(false);
   const [voucherModalVisible, setVoucherModalVisible] = useState(false);
   const [selectedDiscountVoucher, setSelectedDiscountVoucher] = useState(null);
   const [selectedShippingVoucher, setSelectedShippingVoucher] = useState(null);
@@ -182,12 +185,14 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   const handleBuyNow = () => {
+    if (orderingRef.current) return;
     setCheckoutMode('buy');
     setPaymentMethod('cod');
     setVoucherModalVisible(true);
   };
 
   const handleAddToCart = () => {
+    if (orderingRef.current) return;
     setCheckoutMode('cart');
     setVoucherModalVisible(true);
   };
@@ -227,6 +232,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
   };
 
   const handleConfirmCheckout = () => {
+    if (orderingRef.current) return;
     if (checkoutMode === 'buy' && !deliveryAddress.trim()) {
       if (Platform.OS === 'web') window.alert('Vui lòng nhập địa chỉ nhận hàng.');
       else Alert.alert('Thiếu địa chỉ', 'Vui lòng nhập địa chỉ nhận hàng.');
@@ -238,9 +244,10 @@ const ProductDetailScreen = ({ route, navigation }) => {
     const invoiceText = `Tạm tính: ${invoice.subtotal.toLocaleString('vi-VN')} đ\nGiảm giá voucher: -${invoice.discountAmount.toLocaleString('vi-VN')} đ\nPhí ship: ${invoice.baseShippingFee.toLocaleString('vi-VN')} đ\nGiảm phí ship: -${invoice.shippingDiscount.toLocaleString('vi-VN')} đ\nTổng thanh toán: ${invoice.finalTotal.toLocaleString('vi-VN')} đ`;
 
     const proceedWithCheckout = async () => {
-      setVoucherModalVisible(false);
+      if (orderingRef.current) return;
 
       if (checkoutMode === 'cart') {
+        setVoucherModalVisible(false);
         const newCartItem = {
           id: item.id || `cart-${Date.now()}`,
           name: item.name,
@@ -258,6 +265,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
       // TẠO ĐƠN HÀNG QUA API (COD)
       if (paymentMethod === 'vnpay') {
+        setVoucherModalVisible(false);
         navigation.push('VNPayScreen', {
           amount: invoice.finalTotal,
           orderInfo: `Thanh toan don hang`,
@@ -276,6 +284,8 @@ const ProductDetailScreen = ({ route, navigation }) => {
         });
       } else {
         // COD: Gọi API tạo đơn hàng thực sự trong database
+        orderingRef.current = true;
+        setIsOrdering(true);
         try {
           const res = await fetch(apiUrl('/api/orders'), {
             method: 'POST',
@@ -305,6 +315,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
             throw new Error(data?.error || 'Không thể tạo đơn hàng');
           }
 
+          setVoucherModalVisible(false);
           setHasPurchased(true);
           const paymentLabel = 'Thanh toán khi nhận hàng';
           if (Platform.OS === 'web') window.alert(`Đặt hàng thành công!\nMã đơn: ${data.orderCode}\nTổng: ${(data.totalAmount || invoice.finalTotal).toLocaleString('vi-VN')} đ`);
@@ -323,6 +334,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
           console.error('Buy Now COD error:', error);
           if (Platform.OS === 'web') window.alert(`Lỗi: ${error.message}`);
           else Alert.alert('Lỗi', error.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
+        } finally {
+          orderingRef.current = false;
+          setIsOrdering(false);
         }
       }
     };
@@ -478,11 +492,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
 
       {/* BOTTOM ACTION BAR (Cố định ở dưới cùng) */}
       <Animated.View style={[styles.bottomBar, { backgroundColor: isDarkMode ? 'rgba(10, 10, 10, 0.95)' : '#FFFFFF', borderTopColor: ui.border, opacity: fadeAnim }]}> 
-        <TouchableOpacity style={[styles.addToCartBtn, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212, 175, 55, 0.05)' : 'rgba(212,175,55,0.12)' }]} onPress={handleAddToCart}>
+        <TouchableOpacity style={[styles.addToCartBtn, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212, 175, 55, 0.05)' : 'rgba(212,175,55,0.12)' }]} onPress={handleAddToCart} disabled={isOrdering}>
           <Text style={[styles.addToCartText, { color: accent }]}>THÊM VÀO GIỎ</Text>
         </TouchableOpacity>
         
-        <TouchableOpacity style={[styles.buyNowBtn, { backgroundColor: accent }]} onPress={handleBuyNow}>
+        <TouchableOpacity style={[styles.buyNowBtn, { backgroundColor: accent }]} onPress={handleBuyNow} disabled={isOrdering}>
           <Text style={styles.buyNowText}>MUA NGAY</Text>
         </TouchableOpacity>
       </Animated.View>
@@ -493,7 +507,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
         animationType="slide"
         presentationStyle="overFullScreen"
         statusBarTranslucent
-        onRequestClose={() => setVoucherModalVisible(false)}
+        onRequestClose={() => { if (!orderingRef.current) setVoucherModalVisible(false); }}
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
@@ -527,6 +541,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
               />
               <View style={[styles.voucherModalCard, isKeyboardVisible && styles.voucherModalCardKeyboard, { backgroundColor: ui.modalBg, borderColor: ui.border }]}> 
                 <ScrollView
+                  pointerEvents={isOrdering ? 'none' : 'auto'}
                   ref={voucherScrollRef}
                   showsVerticalScrollIndicator={false}
                   keyboardShouldPersistTaps="handled"
@@ -575,6 +590,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
                   <Text style={[styles.voucherGroupTitle, { color: accent }]}>Địa chỉ nhận hàng</Text>
                   <Text style={[styles.addressHint, { color: ui.subText }]}>Nhập đầy đủ số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố</Text>
                   <TextInput
+                    editable={!isOrdering}
                     value={deliveryAddress}
                     onChangeText={setDeliveryAddress}
                     onFocus={handleAddressInputFocus}
@@ -616,11 +632,19 @@ const ProductDetailScreen = ({ route, navigation }) => {
             ) : null}
 
             <View style={styles.voucherActionRow}>
-              <TouchableOpacity style={[styles.voucherCancelBtn, { borderColor: ui.border, backgroundColor: ui.card }]} onPress={() => setVoucherModalVisible(false)}>
+              <TouchableOpacity style={[styles.voucherCancelBtn, { borderColor: ui.border, backgroundColor: ui.card }]} onPress={() => setVoucherModalVisible(false)} disabled={isOrdering}>
                 <Text style={[styles.voucherCancelText, { color: ui.text }]}>Đóng</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.voucherApplyBtn, { backgroundColor: accent }]} onPress={handleConfirmCheckout}>
-                <Text style={styles.voucherApplyText}>Áp dụng & xác nhận</Text>
+              <TouchableOpacity
+                style={[styles.voucherApplyBtn, { backgroundColor: accent }, isOrdering && { opacity: 0.7 }]}
+                onPress={handleConfirmCheckout}
+                disabled={isOrdering}
+                accessibilityLabel="Áp dụng ưu đãi và xác nhận"
+                accessibilityState={{ busy: isOrdering, disabled: isOrdering }}
+              >
+                {isOrdering ? (
+                  <ActivityIndicator color={styles.voucherApplyText.color} accessibilityLabel="Đang tạo đơn hàng" />
+                ) : <Text style={styles.voucherApplyText}>Áp dụng & xác nhận</Text>}
               </TouchableOpacity>
             </View>
                 </ScrollView>

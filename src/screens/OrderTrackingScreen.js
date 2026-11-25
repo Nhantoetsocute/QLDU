@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppTheme } from '../theme/ThemeContext';
@@ -53,6 +53,7 @@ const OrderTrackingScreen = ({ navigation, route }) => {
   const canCancel = currentStatus === 'preparing';
 
   const handleCancelOrder = () => {
+    if (isCancelling) return;
     Alert.alert(
       'Xác nhận hủy đơn',
       `Bạn có chắc muốn hủy đơn ${orderId}?`,
@@ -62,6 +63,7 @@ const OrderTrackingScreen = ({ navigation, route }) => {
           text: 'Hủy đơn',
           style: 'destructive',
           onPress: async () => {
+            if (isCancelling) return;
             if (!orderDbId) {
               Alert.alert('Lỗi', 'Không tìm thấy mã đơn hàng để hủy.');
               return;
@@ -138,8 +140,16 @@ const OrderTrackingScreen = ({ navigation, route }) => {
           </View>
 
           {canCancel ? (
-            <TouchableOpacity style={styles.cancelButton} onPress={handleCancelOrder}>
-              <Text style={styles.cancelButtonText}>HỦY ĐƠN HÀNG</Text>
+            <TouchableOpacity
+              style={[styles.cancelButton, isCancelling && { opacity: 0.7 }]}
+              onPress={handleCancelOrder}
+              disabled={isCancelling}
+              accessibilityLabel="Hủy đơn hàng"
+              accessibilityState={{ busy: isCancelling, disabled: isCancelling }}
+            >
+              {isCancelling ? (
+                <ActivityIndicator color={styles.cancelButtonText.color} accessibilityLabel="Đang hủy đơn hàng" />
+              ) : <Text style={styles.cancelButtonText}>HỦY ĐƠN HÀNG</Text>}
             </TouchableOpacity>
           ) : (
             <View style={styles.viewOnlyBox}>

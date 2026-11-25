@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Platform } from 'react-native
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../theme/ThemeContext';
+import { renderScreenLoadingLayout } from '../components/ScreenLoadingLayout';
 
 import HomeScreen from '../screens/HomeScreen';
 import OrderHistoryScreen from '../screens/OrderHistoryScreen';
@@ -51,6 +52,7 @@ const MainTabNavigator = () => {
 
   return (
     <Tab.Navigator
+      screenLayout={renderScreenLoadingLayout}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true, // Giữ nhãn nhưng sẽ làm cho nó tinh tế hơn

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  ActivityIndicator,
   View,
   Text,
   StyleSheet,
@@ -39,6 +40,7 @@ const CheckoutScreen = ({ navigation }) => {
   const [voucherCode, setVoucherCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [voucherLoading, setVoucherLoading] = useState(false);
   const [addressFocused, setAddressFocused] = useState(false);
 
   const ui = {
@@ -57,9 +59,11 @@ const CheckoutScreen = ({ navigation }) => {
   const total = Math.max(0, subtotal + shippingFee - discount);
 
   const handleApplyVoucher = async () => {
-    if (!voucherCode.trim()) return;
+    if (!voucherCode.trim() || voucherLoading || isLoading) return;
+    setVoucherLoading(true);
     try {
       const res = await fetch(apiUrl('/api/vouchers'));
+      if (!res.ok) throw new Error('Không thể kiểm tra voucher.');
       const vouchers = await res.json();
       const found = vouchers.find(v => v.code?.toLowerCase() === voucherCode.trim().toLowerCase());
       if (found) {
@@ -75,10 +79,13 @@ const CheckoutScreen = ({ navigation }) => {
       }
     } catch (e) {
       Alert.alert('Lỗi', 'Không thể kiểm tra voucher. Hãy thử lại sau.');
+    } finally {
+      setVoucherLoading(false);
     }
   };
 
   const handleOrder = async () => {
+    if (isLoading || voucherLoading) return;
     if (!receiverName.trim() || !receiverPhone.trim() || !deliveryAddress.trim()) {
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập đầy đủ Tên, SĐT và Địa chỉ.');
       return;
@@ -316,12 +323,18 @@ const CheckoutScreen = ({ navigation }) => {
                 autoCapitalize="characters"
                 value={voucherCode}
                 onChangeText={setVoucherCode}
+                editable={!voucherLoading && !isLoading}
               />
               <TouchableOpacity
-                style={[styles.voucherBtn, { backgroundColor: ui.accent }]}
+                style={[styles.voucherBtn, { backgroundColor: ui.accent }, (voucherLoading || isLoading) && { opacity: 0.7 }]}
                 onPress={handleApplyVoucher}
+                disabled={voucherLoading || isLoading}
+                accessibilityLabel="Áp dụng mã giảm giá"
+                accessibilityState={{ busy: voucherLoading, disabled: voucherLoading || isLoading }}
               >
-                <Text style={styles.voucherBtnText}>Áp dụng</Text>
+                {voucherLoading ? (
+                  <ActivityIndicator color={styles.voucherBtnText.color} accessibilityLabel="Đang kiểm tra mã giảm giá" />
+                ) : <Text style={styles.voucherBtnText}>Áp dụng</Text>}
               </TouchableOpacity>
             </View>
           </View>
@@ -365,14 +378,14 @@ const CheckoutScreen = ({ navigation }) => {
             <Text style={[styles.bottomItems, { color: ui.subText }]}>{cartItems.length} sản phẩm</Text>
           </View>
           <TouchableOpacity
-            style={[styles.orderBtn, { backgroundColor: ui.accent }, isLoading && { opacity: 0.7 }]}
+            style={[styles.orderBtn, { backgroundColor: ui.accent }, (isLoading || voucherLoading) && { opacity: 0.7 }]}
             onPress={handleOrder}
-            disabled={isLoading}
+            disabled={isLoading || voucherLoading}
             activeOpacity={0.8}
           >
-            <Text style={styles.orderBtnText}>
-              {isLoading ? 'ĐANG XỬ LÝ...' : 'ĐẶT HÀNG'}
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator color={styles.orderBtnText.color} accessibilityLabel="Đang đặt hàng" />
+            ) : <Text style={styles.orderBtnText}>ĐẶT HÀNG</Text>}
           </TouchableOpacity>
           </View>
         </KeyboardAvoidingView>

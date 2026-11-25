@@ -1,3 +1,4 @@
+import LoadingIndicator from '../components/LoadingIndicator';
 import BackgroundImage from '../components/BackgroundImage';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
@@ -10,7 +11,6 @@ import {
   Image,
   Animated,
   StatusBar,
-  ActivityIndicator,
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons, Feather } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -268,13 +268,17 @@ const OrderHistoryScreen = ({ navigation, route }) => {
 
           {/* DANH SÁCH ĐƠN HÀNG */}
           <Animated.FlatList
+            refreshing={isLoading}
+            onRefresh={fetchOrders}
             data={filteredOrders}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}
             renderItem={renderOrderCard}
-            ListEmptyComponent={() => (
+            ListEmptyComponent={() => isLoading ? (
+              <LoadingIndicator label="Đang tải đơn hàng..." />
+            ) : (
               <View style={styles.emptyContainer}>
                 <Ionicons name="receipt-outline" size={60} color="rgba(212, 175, 55, 0.3)" />
                 <Text style={[styles.emptyTitle, { color: ui.textPrimary }]}>Chưa có giao dịch</Text>
