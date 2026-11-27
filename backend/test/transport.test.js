@@ -8,7 +8,7 @@ const { apiOrigin, apiPath } = require('../../src/config/transport');
 
 const production = {
     NODE_ENV: 'production', PUBLIC_BASE_URL: 'https://api.example.com', DB_HOST: '127.0.0.1',
-    VNP_RETURN_URL: 'https://api.example.com/api/vnpay/return', TRUST_PROXY: 'loopback',
+    TRUST_PROXY: 'loopback',
 };
 test('production origin requires actual HTTPS and rejects credentials, query, fragment and path', () => {
     assert.equal(configuredPublicOrigin(production), 'https://api.example.com');
@@ -16,13 +16,12 @@ test('production origin requires actual HTTPS and rejects credentials, query, fr
         assert.throws(() => configuredPublicOrigin({ ...production, PUBLIC_BASE_URL: value }));
     }
 });
-test('VNPay return must match the configured production origin and expected route', () => {
-    assert.equal(getReturnUrl({}, production), production.VNP_RETURN_URL);
-    for (const value of ['http://api.example.com/api/vnpay/return', 'https://attacker.example/api/vnpay/return', 'https://api.example.com/other', 'https://api.example.com/api/vnpay/return?x=1']) {
-        assert.throws(() => getReturnUrl({}, { ...production, VNP_RETURN_URL: value }));
-    }
-    assert.equal(validateTransportConfig(production).vnpayOrigin, 'https://sandbox.vnpayment.vn');
-    for (const host of ['http://sandbox.vnpayment.vn', 'https://vnpay.attacker.example', 'https://sandbox.vnpayment.vn:444']) assert.throws(() => validateTransportConfig({ ...production, VNP_HOST: host }));
+test('SePay return is derived from the configured production origin; gateway env is restricted', () => {
+    assert.equal(getReturnUrl({ headers: { host: 'attacker.example' } }, production), 'https://api.example.com/api/sepay/return');
+    assert.throws(() => getReturnUrl({}, { ...production, PUBLIC_BASE_URL: undefined }));
+    assert.equal(validateTransportConfig(production).sepayOrigin, 'https://pay-sandbox.sepay.vn');
+    assert.equal(validateTransportConfig({ ...production, SEPAY_ENV: 'production' }).sepayOrigin, 'https://pay.sepay.vn');
+    assert.throws(() => validateTransportConfig({ ...production, SEPAY_ENV: 'https://attacker.example' }));
 });
 test('proxy configuration rejects trust-all and hop count modes', () => {
     assert.equal(trustedProxySetting({}), false);

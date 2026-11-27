@@ -9,7 +9,7 @@ import LoadingIndicator from '../components/LoadingIndicator';
 
 const transportOptions = { apiBase: BASE_URL, development: typeof __DEV__ !== 'undefined' && __DEV__ };
 
-const VNPayScreen = ({ route, navigation }) => {
+const SePayScreen = ({ route, navigation }) => {
   const {
     amount,
     orderInfo,
@@ -35,7 +35,7 @@ const VNPayScreen = ({ route, navigation }) => {
   useEffect(() => {
     const createPaymentUrl = async () => {
       try {
-        const response = await fetch(apiUrl('/api/vnpay/create-payment-url'), {
+        const response = await fetch(apiUrl('/api/sepay/create-payment'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -56,16 +56,16 @@ const VNPayScreen = ({ route, navigation }) => {
 
         const data = await response.json();
         if (!response.ok || typeof data?.paymentUrl !== 'string' || !data.paymentUrl.trim()) {
-          throw new Error(data?.message || 'Không lấy được link thanh toán VNPAY');
+          throw new Error(data?.message || 'Không lấy được link thanh toán SePay');
         }
 
         const payment = paymentDetails(data, transportOptions);
         paymentOrder.current = payment;
         setPaymentUrl(payment.paymentUrl);
       } catch (error) {
-        console.error('VNPay create URL error:', error);
-        setLoadError('Không thể tạo liên kết thanh toán VNPAY. Vui lòng thử lại sau.');
-        Alert.alert('Lỗi thanh toán', error.message || 'Không thể mở VNPAY.', [
+        console.error('SePay create URL error:', error);
+        setLoadError('Không thể tạo liên kết thanh toán SePay. Vui lòng thử lại sau.');
+        Alert.alert('Lỗi thanh toán', error.message || 'Không thể mở SePay.', [
           {
             text: 'Về Trang Chủ',
             onPress: () => navigation.navigate('MainTabs', { screen: 'Trang Chủ' }),
@@ -112,7 +112,7 @@ const VNPayScreen = ({ route, navigation }) => {
       } else {
         // Thanh toán thành công → xoá giỏ hàng + navigate về danh sách đơn hàng (refresh từ DB)
         clearCart();
-        Alert.alert(' Thành công', 'Thanh toán VNPAY thành công!', [
+        Alert.alert(' Thành công', 'Thanh toán SePay thành công!', [
           {
             text: 'Xem đơn hàng',
             onPress: () => navigation.navigate('MainTabs', {
@@ -138,8 +138,8 @@ const VNPayScreen = ({ route, navigation }) => {
   };
 
   const handleWebViewError = () => {
-    setLoadError('Đã xảy ra lỗi khi tải cổng thanh toán VNPAY.');
-    Alert.alert('Lỗi tải trang', 'Không thể mở cổng VNPAY.', [
+    setLoadError('Đã xảy ra lỗi khi tải cổng thanh toán SePay.');
+    Alert.alert('Lỗi tải trang', 'Không thể mở cổng SePay.', [
       {
         text: 'Về Trang Chủ',
         onPress: () => navigation.navigate('MainTabs', { screen: 'Trang Chủ' }),
@@ -155,7 +155,7 @@ const VNPayScreen = ({ route, navigation }) => {
   if (awaitingConfirmation) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.loadingText}>Đang chờ xác nhận thanh toán từ VNPay.</Text>
+        <Text style={styles.loadingText}>Đang chờ xác nhận thanh toán từ SePay.</Text>
         <TouchableOpacity
           style={styles.homeBtn}
           disabled={checkingPayment}
@@ -177,7 +177,7 @@ const VNPayScreen = ({ route, navigation }) => {
   if (typeof paymentUrl !== 'string' || !paymentUrl.trim()) {
     return (
       <SafeAreaView style={styles.center}>
-        <Text style={styles.errorText}>{loadError || 'Không thể mở cổng thanh toán VNPAY.'}</Text>
+        <Text style={styles.errorText}>{loadError || 'Không thể mở cổng thanh toán SePay.'}</Text>
         <TouchableOpacity
           style={styles.homeBtn}
           onPress={() => navigation.goBack()}
@@ -263,4 +263,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default VNPayScreen;
+export default SePayScreen;

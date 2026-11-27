@@ -240,7 +240,7 @@ const ProductDetailScreen = ({ route, navigation }) => {
     }
 
     const invoice = calculateInvoice();
-    const paymentLabel = paymentMethod === 'vnpay' ? 'Thanh toán bằng VNPAY' : 'Thanh toán khi nhận hàng';
+    const paymentLabel = paymentMethod === 'sepay' ? 'Thanh toán bằng SePay' : 'Thanh toán khi nhận hàng';
     const invoiceText = `Tạm tính: ${invoice.subtotal.toLocaleString('vi-VN')} đ\nGiảm giá voucher: -${invoice.discountAmount.toLocaleString('vi-VN')} đ\nPhí ship: ${invoice.baseShippingFee.toLocaleString('vi-VN')} đ\nGiảm phí ship: -${invoice.shippingDiscount.toLocaleString('vi-VN')} đ\nTổng thanh toán: ${invoice.finalTotal.toLocaleString('vi-VN')} đ`;
 
     const proceedWithCheckout = async () => {
@@ -264,9 +264,9 @@ const ProductDetailScreen = ({ route, navigation }) => {
       }
 
       // TẠO ĐƠN HÀNG QUA API (COD)
-      if (paymentMethod === 'vnpay') {
+      if (paymentMethod === 'sepay') {
         setVoucherModalVisible(false);
-        navigation.push('VNPayScreen', {
+        navigation.push('SePayScreen', {
           amount: invoice.finalTotal,
           orderInfo: `Thanh toan don hang`,
           receiverName: profile?.name || 'Khach hang',
@@ -620,11 +620,11 @@ const ProductDetailScreen = ({ route, navigation }) => {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.paymentMethodBtn, { borderColor: ui.border, backgroundColor: ui.card }, paymentMethod === 'vnpay' && [styles.paymentMethodBtnActive, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.2)' }]]}
-                    onPress={() => setPaymentMethod('vnpay')}
+                    style={[styles.paymentMethodBtn, { borderColor: ui.border, backgroundColor: ui.card }, paymentMethod === 'sepay' && [styles.paymentMethodBtnActive, { borderColor: accent, backgroundColor: isDarkMode ? 'rgba(212,175,55,0.12)' : 'rgba(212,175,55,0.2)' }]]}
+                    onPress={() => setPaymentMethod('sepay')}
                   >
-                    <Text style={[styles.paymentMethodText, { color: ui.subText }, paymentMethod === 'vnpay' && [styles.paymentMethodTextActive, { color: accent }]]}>
-                      VNPAY
+                    <Text style={[styles.paymentMethodText, { color: ui.subText }, paymentMethod === 'sepay' && [styles.paymentMethodTextActive, { color: accent }]]}>
+                      SePay
                     </Text>
                   </TouchableOpacity>
                 </View>

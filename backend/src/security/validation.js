@@ -37,7 +37,7 @@ function checkout(body, payment = false) {
     fields(body, payment ? ['type','amount','orderInfo','receiverName','receiverPhone','deliveryAddress','note','voucherId','cartItems'] : ['paymentMethodId','receiverName','receiverPhone','deliveryAddress','note','voucherId','items']);
     const reservation = payment && body.type === 'reservation';
     if (payment && body.type !== undefined && !['order','reservation'].includes(body.type)) fail();
-    if (!payment && body.paymentMethodId !== undefined && body.paymentMethodId !== 1) fail('Đơn thường chỉ hỗ trợ COD. Thanh toán VNPay cần qua API thanh toán.');
+    if (!payment && body.paymentMethodId !== undefined && body.paymentMethodId !== 1) fail('Đơn thường chỉ hỗ trợ COD. Thanh toán SePay cần qua API thanh toán.');
     if (payment && body.amount !== undefined) money(body.amount); // Never used for pricing.
     const result = {
         receiverName: text(body.receiverName ?? (reservation ? 'Khách đặt bàn' : undefined), 120),
@@ -84,12 +84,15 @@ function foodQuery(req,res,next) {
         next();
     } catch(e) { next(e); }
 }
-function paymentQuery(req,res,next) {
+function sepayCheckoutParams(req,res,next) {
+    try { if (Object.keys(req.query).length || !/^[A-Z0-9-]{1,40}$/.test(req.params.orderCode)) fail(); next(); } catch(e) { next(e); }
+}
+function sepayReturnQuery(req,res,next) {
     try {
-        if (Object.keys(req.query).length > 30) fail();
-        for (const [key,value] of Object.entries(req.query)) { if (!/^vnp_[A-Za-z]+$/.test(key)) fail(); text(value,500,0); }
-        if (!/^[0-9a-f]{128}$/i.test(req.query.vnp_SecureHash || '') || !/^\d{1,14}$/.test(req.query.vnp_Amount || '') || !/^[A-Z0-9-]{1,30}$/.test(req.query.vnp_TxnRef || '')) fail('Dữ liệu thanh toán không hợp lệ.');
+        const keys=Object.keys(req.query), {order,r,t}=req.query;
+        if (keys.length!==3 || typeof order!=='string' || !/^[A-Z0-9-]{1,40}$/.test(order) || !['success','error','cancel'].includes(r)
+            || typeof t!=='string' || !/^[0-9a-f]{64}$/.test(t)) fail('Dữ liệu thanh toán không hợp lệ.');
         next();
     } catch(e) { next(e); }
 }
-module.exports = {validate,paramId,foodQuery,paymentQuery,schemas,id,items,quantity,fail};
+module.exports = {validate,paramId,foodQuery,sepayCheckoutParams,sepayReturnQuery,schemas,id,items,quantity,fail};

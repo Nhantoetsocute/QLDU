@@ -15,7 +15,7 @@ const toProduct = (row, ingredients = []) => {
   return {
     id: Number(row.FoodId),
     name: row.FoodName,
-    // Existing cart/COD/VNPAY billing charges BasePrice. Keep quoted prices in
+    // Existing cart/COD/SePay billing charges BasePrice. Keep quoted prices in
     // sync until percentage discounts are supported consistently by billing.
     price: basePrice,
     basePrice,

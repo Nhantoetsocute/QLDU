@@ -107,7 +107,7 @@ const OrderHistoryScreen = ({ navigation, route }) => {
     fetchOrders();
   }, [fetchOrders]);
 
-  // Khi navigate từ Checkout/VNPay với newOrder param → refresh danh sách
+  // Khi navigate từ Checkout/SePay với newOrder param → refresh danh sách
   useEffect(() => {
     if (route?.params?.newOrder || route?.params?.refresh) {
       fetchOrders();

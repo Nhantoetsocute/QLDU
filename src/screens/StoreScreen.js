@@ -208,7 +208,7 @@ const StoreScreen = ({ navigation, route }) => {
       [
         { text: 'Huỷ', style: 'cancel' },
         {
-          text: 'Thanh toán VNPAY',
+          text: 'Thanh toán SePay',
           onPress: () => {
             setModalVisible(false); // Ẩn Modal đi trước khi chuyển trang
             
@@ -228,12 +228,12 @@ const StoreScreen = ({ navigation, route }) => {
               total: `${DEPOSIT_AMOUNT.toLocaleString('vi-VN')} đ`,
               itemCount: 1,
               mainItem: `Đặt bàn ${selectedTableNo} • ${selectedTimeSlot}`,
-              payment: 'Đã thanh toán (VNPAY)',
+              payment: 'Đã thanh toán (SePay)',
               address: store.address,
               image: store.image,
             };
 
-            navigation.push('VNPayScreen', {
+            navigation.push('SePayScreen', {
               amount: DEPOSIT_AMOUNT,
               orderInfo: `Dat coc ban ${selectedTableNo} ${selectedTimeSlot} - ${store.name}`,
               newOrder,

@@ -24,7 +24,7 @@ const formatPrice = (price) => `${price.toString().replace(/\B(?=(\d{3})+(?!\d))
 
 const paymentMethods = [
   { id: 1, key: 'cod', name: 'Thanh toán khi nhận hàng', icon: 'cash-outline', desc: 'Trả tiền mặt cho shipper' },
-  { id: 2, key: 'vnpay', name: 'VNPAY', icon: 'card-outline', desc: 'Ví điện tử, QR, thẻ ngân hàng' },
+  { id: 2, key: 'sepay', name: 'SePay', icon: 'card-outline', desc: 'Ví điện tử, QR, thẻ ngân hàng' },
 ];
 
 const CheckoutScreen = ({ navigation }) => {
@@ -97,9 +97,9 @@ const CheckoutScreen = ({ navigation }) => {
 
     const paymentMethod = paymentMethods.find(p => p.id === selectedPayment);
 
-    // For VNPAY, navigate to VNPay screen — backend se tao don hang
+    // For SePay, navigate to SePay screen — backend se tao don hang
     if (selectedPayment === 2) {
-      navigation.navigate('VNPayScreen', {
+      navigation.navigate('SePayScreen', {
         amount: total,
         orderInfo: `Thanh toan don hang`,
         receiverName: receiverName.trim(),

@@ -21,11 +21,7 @@ function configuredPublicOrigin(env = process.env) {
 }
 function getReturnUrl(req, env = process.env) {
     const origin = configuredPublicOrigin(env);
-    const value = env.VNP_RETURN_URL || `${origin || require('./output').publicOrigin(req, env)}/api/vnpay/return`;
-    const url = parseUrl(value, { production: env.NODE_ENV === 'production' });
-    if (url.pathname !== '/api/vnpay/return') throw new Error('VNP_RETURN_URL phải trỏ tới /api/vnpay/return.');
-    if (env.NODE_ENV === 'production' && url.origin !== origin) throw new Error('VNP_RETURN_URL phải cùng origin với PUBLIC_BASE_URL.');
-    return url.href;
+    return parseUrl(`${origin || require('./output').publicOrigin(req, env)}/api/sepay/return`, { production: env.NODE_ENV === 'production' }).href;
 }
 function trustedProxySetting(env = process.env) {
     if (!env.TRUST_PROXY) return false;
@@ -62,10 +58,9 @@ function validateTransportConfig(env = process.env) {
     const origin = configuredPublicOrigin(env);
     trustedProxySetting(env);
     databaseTlsOptions(env);
-    const host = parseUrl(env.VNP_HOST || 'https://sandbox.vnpayment.vn', { production: true, originOnly: true });
-    if (!['sandbox.vnpayment.vn', 'pay.vnpay.vn'].includes(host.hostname) || host.port) throw new Error('VNP_HOST phải dùng endpoint VNPay chính thức.');
-    if (env.VNP_RETURN_URL || env.NODE_ENV === 'production') getReturnUrl({ headers: {} }, env);
+    const sepayOrigin = new URL(require('../services/sepayService').checkoutUrl(env)).origin;
+    if (env.NODE_ENV === 'production') getReturnUrl({ headers: {} }, env);
     for (const value of (env.CORS_ORIGINS || '').split(',').filter(Boolean)) parseUrl(value.trim(), { production: env.NODE_ENV === 'production', originOnly: true });
-    return { publicOrigin: origin, vnpayOrigin: host.origin };
+    return { publicOrigin: origin, sepayOrigin };
 }
 module.exports = { parseUrl, localHost, configuredPublicOrigin, getReturnUrl, trustedProxySetting, requireSecureTransport, databaseTlsOptions, validateTransportConfig };

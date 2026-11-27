@@ -32,7 +32,7 @@ const termsSections = [
   {
     icon: 'card-outline',
     title: '3. Thanh toán',
-    content: 'True Juice hỗ trợ các phương thức thanh toán:\n\n• COD (Thanh toán khi nhận hàng): Trả tiền mặt cho shipper\n• VNPAY: Thanh toán qua ví điện tử, QR code hoặc thẻ ngân hàng\n\nMọi giao dịch VNPAY được bảo mật theo tiêu chuẩn PCI DSS.',
+    content: 'True Juice hỗ trợ các phương thức thanh toán:\n\n• COD (Thanh toán khi nhận hàng): Trả tiền mặt cho shipper\n• SePay: Thanh toán qua ví điện tử, QR code hoặc thẻ ngân hàng\n\nMọi giao dịch SePay được bảo mật theo tiêu chuẩn PCI DSS.',
   },
   {
     icon: 'bicycle-outline',
@@ -42,7 +42,7 @@ const termsSections = [
   {
     icon: 'refresh-outline',
     title: '5. Đổi trả & Hoàn tiền',
-    content: 'True Juice cam kết đổi/trả trong các trường hợp:\n\n• Sản phẩm bị hỏng hoặc sai đơn → Đổi mới 100%\n• Đơn hàng giao nhầm → Hoàn tiền hoặc giao lại miễn phí\n• Khách hàng tự hủy sau khi đã pha chế → Không hoàn tiền\n\nThời gian hoàn tiền VNPAY: 3–5 ngày làm việc.',
+    content: 'True Juice cam kết đổi/trả trong các trường hợp:\n\n• Sản phẩm bị hỏng hoặc sai đơn → Đổi mới 100%\n• Đơn hàng giao nhầm → Hoàn tiền hoặc giao lại miễn phí\n• Khách hàng tự hủy sau khi đã pha chế → Không hoàn tiền\n\nThời gian hoàn tiền SePay: 3–5 ngày làm việc.',
   },
   {
     icon: 'gift-outline',
