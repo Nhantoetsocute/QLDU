@@ -36,7 +36,7 @@ async function createOrder(connection, userId, input) {
         totalAmount=Math.max(0,totalAmount-(fixed>0 ? fixed : Math.round(totalAmount*percent/100)));
     }
     totalAmount=Math.round(totalAmount*100)/100;
-    if (!Number.isFinite(totalAmount) || totalAmount<0 || totalAmount>1e9 || (input.paymentMethodId===2 && totalAmount<=0)) reject('Tổng tiền không hợp lệ.');
+    if (!Number.isFinite(totalAmount) || totalAmount<0 || totalAmount>1e9 || (input.paymentMethodId===2 && (totalAmount<=0 || !Number.isInteger(totalAmount)))) reject('Tổng tiền không hợp lệ.');
     const orderCode=(input.type==='reservation'?'RES':'ORD')+new Date().toISOString().slice(2,10).replace(/-/g,'')+randomBytes(8).toString('hex').toUpperCase();
     const [result]=await connection.execute(`INSERT INTO Orders (OrderCode,UserId,TotalAmount,PaymentMethodId,StatusId,VoucherId,ReceiverName,ReceiverPhone,DeliveryAddress,Note) VALUES (?,?,?,?,1,?,?,?,?,?)`,
         [orderCode,userId,totalAmount,input.paymentMethodId,input.voucherId,'','','',null]);
@@ -64,7 +64,7 @@ async function cancelOrder(connection,userId,orderId) {
     if (!order) reject('Không tìm thấy đơn hàng.',404);
     if (Number(order.StatusId)!==1) reject('Chỉ có thể hủy đơn đang chuẩn bị.',409);
     // A pending gateway session may still capture funds. User cancellation must not race it.
-    if (Number(order.PaymentMethodId)===2) reject('Đơn VNPay cần xác nhận thanh toán hoặc xử lý hoàn tiền qua hỗ trợ.',409);
+    if (Number(order.PaymentMethodId)===2) reject('Đơn SePay cần xác nhận thanh toán hoặc xử lý hoàn tiền qua hỗ trợ.',409);
     await connection.execute('UPDATE Orders SET StatusId = 4 WHERE OrderId = ? AND UserId = ? AND StatusId = 1',[orderId,userId]);
     await restoreStock(connection,orderId);
     return {orderCode:order.OrderCode};
@@ -73,22 +73,56 @@ function cents(value) {
     if (!/^\d+(?:\.\d{1,2})?$/.test(String(value))) return null;
     const [whole,fraction='']=String(value).split('.'); return BigInt(whole)*100n+BigInt(fraction.padEnd(2,'0'));
 }
-async function confirmPayment(connection,query,verify,tmnCode) {
-    if (!verify.isVerified || query.vnp_TmnCode!==tmnCode) return {RspCode:'97',Message:'Invalid checksum'};
-    const [orders]=await connection.execute('SELECT OrderId,TotalAmount,StatusId,PaymentMethodId FROM Orders WHERE OrderCode = ? FOR UPDATE',[query.vnp_TxnRef]);
+async function lockGatewayOrder(connection,orderCode) {
+    const [orders]=await connection.execute('SELECT OrderId,TotalAmount,StatusId,PaymentMethodId FROM Orders WHERE OrderCode = ? FOR UPDATE',[orderCode]);
     const order=orders[0];
-    if (!order || Number(order.PaymentMethodId)!==2) return {RspCode:'01',Message:'Order not found'};
-    if (cents(order.TotalAmount)!==BigInt(query.vnp_Amount)) return {RspCode:'04',Message:'Invalid amount'};
+    if (!order || Number(order.PaymentMethodId)!==2) return null;
     const [payments]=await connection.execute('SELECT State FROM PaymentTransactions WHERE OrderId = ? FOR UPDATE',[order.OrderId]);
-    if (!payments[0]) return {RspCode:'01',Message:'Payment not found'};
-    if (payments[0].State!=='pending' || Number(order.StatusId)!==1) return {RspCode:'02',Message:'Order already confirmed'};
-    const success=verify.isSuccess && query.vnp_TransactionStatus==='00';
-    await connection.execute('UPDATE PaymentTransactions SET State = ?, TransactionNo = ? WHERE OrderId = ?',[success?'paid':'failed',query.vnp_TransactionNo || null,order.OrderId]);
-    if (!success) {
-        await connection.execute('UPDATE Orders SET StatusId = 4 WHERE OrderId = ? AND StatusId = 1',[order.OrderId]);
-        await restoreStock(connection,order.OrderId);
+    return payments[0] ? {...order,State:payments[0].State} : null;
+}
+async function failPayment(connection,order,transactionNo=null) {
+    await connection.execute("UPDATE PaymentTransactions SET State = 'failed', TransactionNo = ? WHERE OrderId = ?",[transactionNo,order.OrderId]);
+    const [updated]=await connection.execute('UPDATE Orders SET StatusId = 4 WHERE OrderId = ? AND StatusId = 1',[order.OrderId]);
+    if (updated.affectedRows===1) await restoreStock(connection,order.OrderId);
+}
+// Customer cancelled / gateway error on the SePay page (return URL with a valid token). Never touches a paid order.
+async function cancelPendingPayment(connection,orderCode) {
+    const order=await lockGatewayOrder(connection,orderCode);
+    if (!order || order.State!=='pending' || Number(order.StatusId)!==1) return false;
+    await failPayment(connection,order);
+    return true;
+}
+const transactionRef=value=>String(value ?? '').replace(/[^A-Za-z0-9_-]/g,'').slice(0,60) || null;
+/**
+ * Authenticated SePay IPN (safe to replay). Mirrors sepay_handle_ipn in WEB-PHP.
+ * @returns 'paid' | 'duplicate' | 'mismatch' | 'late' | 'voided' | 'ignored' | 'unknown'
+ */
+async function handleSepayIpn(connection,data) {
+    const remote=data?.order && typeof data.order==='object' ? data.order : {};
+    const tx=data?.transaction && typeof data.transaction==='object' ? data.transaction : {};
+    const type=data?.notification_type;
+    if (type!=='ORDER_PAID' && type!=='TRANSACTION_VOID') return 'ignored';
+    const invoice=String(remote.order_invoice_number ?? '');
+    if (!/^[A-Z0-9-]{1,40}$/.test(invoice)) return 'unknown';
+    const order=await lockGatewayOrder(connection,invoice);
+    if (!order) return 'unknown';
+    if (type==='TRANSACTION_VOID') {
+        if (order.State!=='paid' || Number(order.StatusId)!==1) return 'duplicate'; // shipped/finished: admin refunds manually
+        await failPayment(connection,order,transactionRef(tx.transaction_id ?? tx.id));
+        return 'voided';
     }
-    return {RspCode:'00',Message:'Confirm Success'};
+    if (remote.order_status!=='CAPTURED' || (tx.transaction_status!==undefined && tx.transaction_status!=='APPROVED')) return 'ignored';
+    const amount=cents(remote.order_amount);
+    if (amount===null || amount!==cents(order.TotalAmount)) return 'mismatch';
+    const ref=transactionRef(tx.transaction_id ?? tx.id ?? remote.id);
+    if (order.State==='failed') {
+        // Money arrived after the order was cancelled: keep it visible for refund/reconciliation.
+        await connection.execute('UPDATE PaymentTransactions SET TransactionNo = ? WHERE OrderId = ?',[`LATE_PAID:${ref || ''}`.slice(0,100),order.OrderId]);
+        return 'late';
+    }
+    if (order.State!=='pending' || Number(order.StatusId)!==1) return 'duplicate';
+    await connection.execute("UPDATE PaymentTransactions SET State = 'paid', TransactionNo = ? WHERE OrderId = ?",[ref,order.OrderId]);
+    return 'paid';
 }
 async function transaction(pool,work) {
     let connection;
@@ -98,4 +132,4 @@ async function transaction(pool,work) {
     } catch(e) { if(connection) await connection.rollback(); throw e; }
     finally { if(connection) connection.release(); }
 }
-module.exports={lockActiveAccount,createOrder,cancelOrder,confirmPayment,transaction,cents};
+module.exports={lockActiveAccount,createOrder,cancelOrder,cancelPendingPayment,handleSepayIpn,transaction,cents};

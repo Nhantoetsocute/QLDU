@@ -225,7 +225,7 @@ CREATE TABLE IF NOT EXISTS PhuongThucThanhToan (
   IsActive         TINYINT(1)    NOT NULL DEFAULT 1,
 
   UNIQUE KEY UK_PaymentMethod_Name (TenPhuongThuc)
-) ENGINE=InnoDB COMMENT='Phương thức thanh toán — COD (id=1), VNPAY (id=2)';
+) ENGINE=InnoDB COMMENT='Phương thức thanh toán — COD (id=1), SEPAY (id=2)';
 
 
 CREATE TABLE IF NOT EXISTS OrderStatus (
@@ -264,7 +264,7 @@ CREATE TABLE IF NOT EXISTS Orders (
   UserId           BIGINT UNSIGNED NOT NULL,
   OrderDate        DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP,
   TotalAmount      DECIMAL(12,2)   NOT NULL DEFAULT 0 COMMENT 'Tổng tiền sau giảm giá',
-  PaymentMethodId  BIGINT UNSIGNED NOT NULL           COMMENT '1=COD, 2=VNPAY',
+  PaymentMethodId  BIGINT UNSIGNED NOT NULL           COMMENT '1=COD, 2=SEPAY',
   StatusId         BIGINT UNSIGNED NOT NULL           COMMENT '1=preparing, 2=shipping, 3=completed, 4=cancelled',
   VoucherId        BIGINT UNSIGNED NULL,
   ReceiverName     VARCHAR(120)    NOT NULL           COMMENT 'Snapshot tên người nhận',
@@ -415,7 +415,7 @@ CREATE TABLE IF NOT EXISTS InvoiceDetail (
 
 -- ── Phương thức thanh toán ──
 INSERT INTO PhuongThucThanhToan (PaymentMethodId, TenPhuongThuc)
-VALUES (1, 'COD'), (2, 'VNPAY')
+VALUES (1, 'COD'), (2, 'SEPAY')
 ON DUPLICATE KEY UPDATE TenPhuongThuc = VALUES(TenPhuongThuc);
 
 -- ── Trạng thái đơn hàng ──

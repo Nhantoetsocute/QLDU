@@ -35,7 +35,7 @@ const privacySections = [
   },
   {
     icon: 'share-social-outline', title: '3. Dịch vụ bên ngoài và AI',
-    content: 'VNPay xử lý thông tin cần cho giao dịch; dịch vụ email gửi mã OTP. Khi bạn bật trợ lý AI, nội dung câu hỏi và lịch sử gần đây được gửi tới Google Gemini. Với dịch vụ miễn phí, Google có thể dùng nội dung để cải thiện sản phẩm theo điều khoản của họ. App lọc một số mẫu email, số điện thoại và khóa, nhưng không bảo đảm nhận diện mọi dữ liệu cá nhân. Không gửi dữ liệu nhạy cảm. Tắt AI sẽ ngăn yêu cầu mới và xóa lịch sử chat trong app; không thu hồi nội dung đã gửi tới nhà cung cấp.',
+    content: 'SePay xử lý thông tin cần cho giao dịch; dịch vụ email gửi mã OTP. Khi bạn bật trợ lý AI, nội dung câu hỏi và lịch sử gần đây được gửi tới Google Gemini. Với dịch vụ miễn phí, Google có thể dùng nội dung để cải thiện sản phẩm theo điều khoản của họ. App lọc một số mẫu email, số điện thoại và khóa, nhưng không bảo đảm nhận diện mọi dữ liệu cá nhân. Không gửi dữ liệu nhạy cảm. Tắt AI sẽ ngăn yêu cầu mới và xóa lịch sử chat trong app; không thu hồi nội dung đã gửi tới nhà cung cấp.',
   },
   {
     icon: 'trash-outline', title: '4. Xuất dữ liệu và đóng tài khoản',

@@ -16,7 +16,7 @@ import MenuScreen from './src/screens/MenuScreen';
 import CartScreen from './src/screens/CartScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import OffersScreen from './src/screens/OffersScreen';
-import VNPayScreen from './src/screens/VNPayScreen';
+import SePayScreen from './src/screens/SePayScreen';
 import CheckoutScreen from './src/screens/CheckoutScreen';
 import NotificationsScreen from './src/screens/NotificationsScreen';
 import LanguageScreen from './src/screens/LanguageScreen';
@@ -55,7 +55,7 @@ const AppNavigator = () => {
         <Stack.Screen name="Menu" component={MenuScreen} />
         <Stack.Screen name="Profile" component={ProfileScreen} />
         <Stack.Screen name="Offers" component={OffersScreen} />
-        <Stack.Screen name="VNPayScreen" component={VNPayScreen} />
+        <Stack.Screen name="SePayScreen" component={SePayScreen} />
         <Stack.Screen name="Checkout" component={CheckoutScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Language" component={LanguageScreen} />

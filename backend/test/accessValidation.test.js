@@ -5,8 +5,9 @@ const http=require('node:http');
 const express=require('express');
 const sharp=require('sharp');
 process.env.JWT_SECRET='access-validation-tests-private-secret-at-least-32';
-process.env.VNP_TMN_CODE='TESTONLY';
-process.env.VNP_HASH_SECRET='payment-test-only-private-key';
+process.env.SEPAY_MERCHANT_ID='SP-TEST-ONLY';
+process.env.SEPAY_IPN_SECRET='ipn-test-only-private-secret';
+process.env.SEPAY_SECRET_KEY='payment-test-only-private-key';
 const auth=require('../src/config/auth');
 const {createAuthMiddleware}=require('../src/middleware/authMiddleware');
 const validation=require('../src/security/validation');
@@ -135,38 +136,68 @@ test('order cancellation rejects another owner and paid orders; replay restores 
     db=cancellationDb({paid:true});await assert.rejects(orderSecurity.cancelOrder(db.c,7,12),{status:409});assert.equal(db.restores(),0);
 });
 
-function paymentDb() {
-    let state='pending',restores=0,writes=0;
+function paymentDb({state:initial='pending',status:initialStatus=1}={}) {
+    let state=initial,status=initialStatus,restores=0,writes=0,txNo=null;
     const c={execute:async(sql,args)=>{
-        if(sql.startsWith('SELECT OrderId,TotalAmount'))return [[{OrderId:12,TotalAmount:'50000.00',StatusId:1,PaymentMethodId:2}]];
+        if(sql.startsWith('SELECT OrderId,TotalAmount'))return [[{OrderId:12,TotalAmount:'50000.00',StatusId:status,PaymentMethodId:2}]];
         if(sql.startsWith('SELECT State'))return [[{State:state}]];
-        if(sql.startsWith('UPDATE PaymentTransactions')){state=args[0];writes++;}
+        if(sql.startsWith('UPDATE PaymentTransactions')){writes++;const m=/State = '(\w+)'/.exec(sql);if(m)state=m[1];txNo=args[0];}
+        if(sql.startsWith('UPDATE Orders SET StatusId = 4')){if(status!==1)return [{affectedRows:0}];status=4;}
         if(sql.startsWith('SELECT FoodId,Quantity'))return [[{FoodId:1,Quantity:2}]];
         if(sql.startsWith('UPDATE Food'))restores++;
         return [{affectedRows:1}];
     }};
-    return {c,state:()=>state,restores:()=>restores,writes:()=>writes};
+    return {c,state:()=>state,status:()=>status,restores:()=>restores,writes:()=>writes,txNo:()=>txNo};
 }
-const query={vnp_TmnCode:'TESTONLY',vnp_TxnRef:'ORDTEST',vnp_Amount:'5000000',vnp_TransactionStatus:'00',vnp_TransactionNo:'123'};
-test('payment rejects unsigned, wrong-merchant and wrong-amount callbacks without state changes',async()=>{
-    for(const [q,verified,expected] of [[query,false,'97'],[{...query,vnp_TmnCode:'OTHER'},true,'97'],[{...query,vnp_Amount:'100'},true,'04']]) {
-        const db=paymentDb();const result=await orderSecurity.confirmPayment(db.c,q,{isVerified:verified,isSuccess:true},'TESTONLY');
-        assert.equal(result.RspCode,expected);assert.equal(db.writes(),0);assert.equal(db.restores(),0);
+const ipn={notification_type:'ORDER_PAID',order:{order_invoice_number:'ORDTEST',order_status:'CAPTURED',order_amount:'50000.00',id:'o1'},transaction:{transaction_id:'TX123',transaction_status:'APPROVED'}};
+test('SePay IPN rejects wrong amount, uncaptured and unknown notifications without state changes',async()=>{
+    for(const [data,expected] of [
+        [{...ipn,order:{...ipn.order,order_amount:'100'}},'mismatch'],
+        [{...ipn,order:{...ipn.order,order_amount:'abc'}},'mismatch'],
+        [{...ipn,order:{...ipn.order,order_status:'PENDING'}},'ignored'],
+        [{...ipn,transaction:{...ipn.transaction,transaction_status:'DECLINED'}},'ignored'],
+        [{...ipn,notification_type:'OTHER'},'ignored'],
+        [{...ipn,order:{...ipn.order,order_invoice_number:"x' OR 1=1"}},'unknown'],
+    ]) {
+        const db=paymentDb();assert.equal(await orderSecurity.handleSepayIpn(db.c,data),expected);
+        assert.equal(db.writes(),0);assert.equal(db.restores(),0);
     }
 });
-test('successful payment is final; replay or a later failure cannot cancel a paid order',async()=>{
+test('SePay paid IPN is final; replay and browser cancel cannot cancel a paid order',async()=>{
     const db=paymentDb();
-    assert.equal((await orderSecurity.confirmPayment(db.c,query,{isVerified:true,isSuccess:true},'TESTONLY')).RspCode,'00');
-    assert.equal(db.state(),'paid');
-    assert.equal((await orderSecurity.confirmPayment(db.c,query,{isVerified:true,isSuccess:false},'TESTONLY')).RspCode,'02');
+    assert.equal(await orderSecurity.handleSepayIpn(db.c,ipn),'paid');
+    assert.equal(db.state(),'paid');assert.equal(db.txNo(),'TX123');
+    assert.equal(await orderSecurity.handleSepayIpn(db.c,ipn),'duplicate');
+    assert.equal(await orderSecurity.cancelPendingPayment(db.c,'ORDTEST'),false);
     assert.equal(db.state(),'paid');assert.equal(db.writes(),1);assert.equal(db.restores(),0);
 });
-test('failed payment restores stock once and ignores repeated callbacks',async()=>{
+test('browser cancel restores stock once; a later payment is flagged as late, not paid',async()=>{
     const db=paymentDb();
-    const verify={isVerified:true,isSuccess:false};
-    await orderSecurity.confirmPayment(db.c,query,verify,'TESTONLY');
-    await orderSecurity.confirmPayment(db.c,query,verify,'TESTONLY');
-    assert.equal(db.state(),'failed');assert.equal(db.restores(),1);
+    assert.equal(await orderSecurity.cancelPendingPayment(db.c,'ORDTEST'),true);
+    assert.equal(await orderSecurity.cancelPendingPayment(db.c,'ORDTEST'),false);
+    assert.equal(db.state(),'failed');assert.equal(db.status(),4);assert.equal(db.restores(),1);
+    assert.equal(await orderSecurity.handleSepayIpn(db.c,ipn),'late');
+    assert.equal(db.state(),'failed');assert.equal(db.txNo(),'LATE_PAID:TX123');
+});
+test('SePay void cancels an unshipped paid order once and restores stock once',async()=>{
+    const db=paymentDb({state:'paid'});const voidIpn={...ipn,notification_type:'TRANSACTION_VOID'};
+    assert.equal(await orderSecurity.handleSepayIpn(db.c,voidIpn),'voided');
+    assert.equal(await orderSecurity.handleSepayIpn(db.c,voidIpn),'duplicate');
+    assert.equal(db.state(),'failed');assert.equal(db.status(),4);assert.equal(db.restores(),1);
+    const shipped=paymentDb({state:'paid',status:2});
+    assert.equal(await orderSecurity.handleSepayIpn(shipped.c,voidIpn),'duplicate');assert.equal(shipped.writes(),0);
+});
+test('SePay form signature matches the SDK format and return tokens are per order',()=>{
+    const sepay=require('../src/services/sepayService');
+    const f=sepay.formFields({orderCode:'ORDTEST',totalAmount:'50000.00'},'https://api.example.com/api/sepay/return');
+    assert.equal(f.order_amount,'50000');assert.equal(f.order_invoice_number,'ORDTEST');assert.equal(f.merchant,process.env.SEPAY_MERCHANT_ID);
+    const {signature,...signed}=f;
+    assert.equal(signature,createHmac('sha256',process.env.SEPAY_SECRET_KEY).update(Object.entries(signed).map(([k,v])=>`${k}=${v}`).join(',')).digest('base64'));
+    assert.match(f.cancel_url,/^https:\/\/api\.example\.com\/api\/sepay\/return\?order=ORDTEST&t=[0-9a-f]{64}&r=cancel$/);
+    assert.equal(sepay.validReturnToken('ORDTEST',sepay.returnToken('ORDTEST')),true);
+    assert.equal(sepay.validReturnToken('ORDOTHER',sepay.returnToken('ORDTEST')),false);
+    assert.equal(sepay.verifyIpn(process.env.SEPAY_IPN_SECRET),true);
+    for(const v of [undefined,'','wrong',process.env.SEPAY_IPN_SECRET+'x'])assert.equal(sepay.verifyIpn(v),false);
 });
 
 test('avatar is decoded and reencoded; HTML masquerading as an image and SVG are rejected',async()=>{
@@ -202,7 +233,7 @@ async function server(t) {
     const app=express();app.use(headers);app.use(express.json({limit:'1kb'}));
     app.use('/api/orders',require('../src/routes/orderRoutes'));
     app.use('/api/food', (req,res,next)=>{if(req.path==='/') return validation.foodQuery(req,res,next);next();}, (req,res)=>res.json({ok:true}));
-    app.use('/api/vnpay',require('../src/routes/vnpayRoutes'));
+    app.use('/api/sepay',require('../src/routes/sepayRoutes'));
     app.post('/validate',validation.validate('profile'),(req,res)=>res.json(req.body));
     app.use(errors);
     const s=http.createServer(app);
@@ -222,25 +253,38 @@ test('HTTP enforces login, object ownership, pagination, malformed JSON and boun
     assert.equal(bad.status,400);assert.ok(!(await bad.text()).includes('SyntaxError'));
     assert.equal((await fetch(base+'/validate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'x'.repeat(2000)})})).status,413);
 });
-test('HTTP unsigned VNPay return never updates an order or reflects injected markup',async t=>{
+test('HTTP SePay return with a forged token never touches the database or reflects injected markup',async t=>{
     const {base}=await server(t);dbCalls=[];
-    const query=new URLSearchParams({vnp_TxnRef:'ORDTEST',vnp_Amount:'5000000',vnp_SecureHash:'0'.repeat(128),vnp_TmnCode:'TESTONLY',vnp_ResponseCode:'24'});
-    const response=await fetch(base+'/api/vnpay/return?'+query);
-    assert.equal(response.status,400);assert.equal(dbCalls.length,0);
-    query.set('vnp_TxnRef','<script>alert(1)</script>');
-    const injected=await fetch(base+'/api/vnpay/return?'+query);
-    assert.equal(injected.status,400);assert.ok(!(await injected.text()).includes('<script>'));
+    const sepay=require('../src/services/sepayService');
+    for(const q of [{order:'ORDTEST',t:'0'.repeat(64),r:'cancel'},{order:'ORDTEST',t:sepay.returnToken('ORDOTHER'),r:'cancel'},{order:'<script>alert(1)</script>',t:'0'.repeat(64),r:'cancel'},{order:'ORDTEST',t:sepay.returnToken('ORDTEST'),r:'cancel',extra:'1'}]) {
+        const response=await fetch(base+'/api/sepay/return?'+new URLSearchParams(q));
+        assert.equal(response.status,400);assert.ok(!(await response.text()).includes('<script>'));
+    }
+    assert.equal(dbCalls.length,0);
 });
-test('HTTP signed browser return is display-only and cannot cancel a paid order',async t=>{
+test('HTTP SePay IPN requires the secret header before any database access',async t=>{
     const {base}=await server(t);dbCalls=[];
-    const {buildPaymentUrlSearchParams}=require('vnpay');
-    const q={...query,vnp_ResponseCode:'24'};
-    const hash=createHmac('sha512',process.env.VNP_HASH_SECRET).update(buildPaymentUrlSearchParams(q).toString()).digest('hex');
-    const response=await fetch(base+'/api/vnpay/return?'+new URLSearchParams({...q,vnp_SecureHash:hash}));
-    // The fake database rejects reads here; any write would also be caught in dbCalls.
-    assert.equal(response.status,400);
-    assert.ok(dbCalls.some(c=>c.sql.startsWith('SELECT o.TotalAmount')));
-    assert.ok(dbCalls.every(c=>c.sql.startsWith('SELECT')));
+    const send=headers=>fetch(base+'/api/sepay/ipn',{method:'POST',headers:{'Content-Type':'application/json',...headers},body:JSON.stringify(ipn)});
+    for(const h of [{},{'X-Secret-Key':'wrong'},{'X-Secret-Key':process.env.SEPAY_SECRET_KEY}]) assert.equal((await send(h)).status,401);
+    assert.equal(dbCalls.length,0);
+    const db=paymentDb();customDb=(sql,args)=>db.c.execute(sql,args);
+    try {
+        const ok=await send({'X-Secret-Key':process.env.SEPAY_IPN_SECRET});
+        assert.equal(ok.status,200);assert.deepEqual(await ok.json(),{success:true});assert.equal(db.state(),'paid');
+    } finally { customDb=null; }
+});
+test('HTTP SePay checkout auto-posts a signed form only to the SePay origin',async t=>{
+    const {base}=await server(t);
+    customDb=async (sql,args)=>sql.includes("pt.State = 'pending'")&&args[0]==='ORDTEST'?[[{OrderCode:'ORDTEST',TotalAmount:'50000.00'}]]:[[]];
+    try {
+        const response=await fetch(base+'/api/sepay/checkout/ORDTEST');
+        assert.equal(response.status,200);
+        assert.match(response.headers.get('content-security-policy'),/form-action https:\/\/pay-sandbox\.sepay\.vn;/);
+        const html=await response.text();
+        assert.match(html,/action="https:\/\/pay-sandbox\.sepay\.vn\/v1\/checkout\/init"/);assert.match(html,/name="signature"/);
+        assert.equal((await fetch(base+'/api/sepay/checkout/ORDTEST?x=1')).status,400);
+        assert.equal((await fetch(base+'/api/sepay/checkout/ORDOTHER')).status,404);
+    } finally { customDb=null; }
 });
 
 

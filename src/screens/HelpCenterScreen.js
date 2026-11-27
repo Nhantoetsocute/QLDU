@@ -26,7 +26,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 const faqItems = [
   {
     question: 'Làm sao để đặt hàng trên True Juice?',
-    answer: 'Bạn chỉ cần chọn sản phẩm yêu thích từ Trang Chủ hoặc mục Tất cả sản phẩm, thêm vào giỏ hàng, sau đó nhấn "Thanh toán" để hoàn tất đơn hàng. Bạn có thể chọn COD hoặc VNPAY.',
+    answer: 'Bạn chỉ cần chọn sản phẩm yêu thích từ Trang Chủ hoặc mục Tất cả sản phẩm, thêm vào giỏ hàng, sau đó nhấn "Thanh toán" để hoàn tất đơn hàng. Bạn có thể chọn COD hoặc SePay.',
   },
   {
     question: 'Tôi có thể hủy đơn hàng không?',
@@ -46,7 +46,7 @@ const faqItems = [
   },
   {
     question: 'Làm sao để đặt bàn trước tại cửa hàng?',
-    answer: 'Vào tab "Cửa Hàng", chọn chi nhánh, chọn khung giờ và bàn trống. Thanh toán cọc qua VNPAY để hoàn tất đặt bàn. Bạn có thể hủy đặt bàn bất cứ lúc nào.',
+    answer: 'Vào tab "Cửa Hàng", chọn chi nhánh, chọn khung giờ và bàn trống. Thanh toán cọc qua SePay để hoàn tất đặt bàn. Bạn có thể hủy đặt bàn bất cứ lúc nào.',
   },
 ];
 

@@ -123,7 +123,8 @@ QLDU/
 | POST   | `/api/orders`                   | ✅   | Tạo đơn hàng (COD)       |
 | GET    | `/api/orders`                   | ✅   | Lịch sử đơn hàng         |
 | PUT    | `/api/orders/:id/cancel`        | ✅   | Hủy đơn hàng             |
-| POST   | `/api/vnpay/create-payment-url` | ✅   | Tạo link thanh toán VNPay |
+| POST   | `/api/sepay/create-payment`     | ✅   | Tạo đơn + link thanh toán SePay |
+| POST   | `/api/sepay/ipn`                | —    | SePay IPN (header X-Secret-Key) |
 
 ---
 
@@ -139,10 +140,10 @@ Xem file `backend/.env.example` để biết tất cả biến cần thiết.
 | `DB_PASSWORD`     | MySQL password (mặc định: rỗng)        |
 | `DB_NAME`         | Tên database                            |
 | `JWT_SECRET`      | Secret key cho JWT token               |
-| `VNP_TMN_CODE`    | Mã TMN từ VNPay Sandbox               |
-| `VNP_HASH_SECRET` | Hash secret từ VNPay Sandbox           |
-| `VNP_HOST`        | VNPay gateway URL                      |
-| `VNP_TEST_MODE`   | `true` = sandbox, `false` = production |
+| `SEPAY_ENV`         | `sandbox` hoặc `production`            |
+| `SEPAY_MERCHANT_ID` | Mã merchant SePay (`SP-...`)           |
+| `SEPAY_SECRET_KEY`  | Secret ký form checkout                |
+| `SEPAY_IPN_SECRET`  | Giá trị header X-Secret-Key của IPN    |
 
 ---
 
